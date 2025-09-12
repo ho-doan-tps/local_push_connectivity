@@ -8,6 +8,7 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.websocket.Frame
+import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.readText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,21 @@ class WebSocketClient(
         }
     }
 
-    private var scope = CoroutineScope(Job() + Dispatchers.Default)
+    private suspend fun WebSocketSession.heartbeat() {
+        while (isConnected) {
+            try {
+                send(Frame.Text("""{"type":"ping"}"""))
+            } catch (e: Exception) {
+                println("Heartbeat failed: ${e.message}")
+                disconnect(false)
+                connect()
+                break
+            }
+            delay(5000)
+        }
+    }
+
+    private var scope:CoroutineScope? = CoroutineScope(Job() + Dispatchers.Default)
 
     private suspend fun mConnect() {
         val url =
@@ -36,6 +51,7 @@ class WebSocketClient(
 
         client.webSocket(url) {
             isConnected = true
+            launch { heartbeat() }
             send(Frame.Text(messageRegister()))
             for (message in incoming) {
                 when (message) {
@@ -46,29 +62,33 @@ class WebSocketClient(
         }
     }
 
+    @Synchronized
     override fun connect() {
+        disconnect(false)
         startTimer()
         try {
             Log.d(TAG, "connect: ${hasSettingConnect()}")
             if (hasSettingConnect()) return
-            scope.cancel()
             scope = CoroutineScope(Job() + Dispatchers.Default)
-            scope.launch {
+            scope?.launch {
                 try {
                     mConnect()
                 } catch (e: Exception) {
+                    isConnected = false
                     Log.e(TAG, "connect: error ${e.message}")
                     delay(5000)
                     createSocket()
                 }
             }
         } catch (e: Exception) {
+            isConnected = false
             Log.e(TAG, "connect: error ${e.message}")
             Thread.sleep(5000)
             createSocket()
         }
     }
 
+    @Synchronized
     override fun disconnect(isRemoveSetting: Boolean) {
         isConnected = false
         if(isRemoveSetting) {
@@ -76,6 +96,7 @@ class WebSocketClient(
         }
         thread?.interrupt()
         thread = null
-        scope.cancel()
+        scope?.cancel()
+        scope = null
     }
 }

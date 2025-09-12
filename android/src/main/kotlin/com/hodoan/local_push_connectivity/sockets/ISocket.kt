@@ -43,7 +43,14 @@ abstract class ISocket(
         }
 
     abstract fun connect()
+
     abstract fun disconnect(isRemoveSetting: Boolean = true)
+
+    fun release() {
+        stopTimer()
+        disconnect(false)
+    }
+
     fun hasSettingConnect(): Boolean =
         settings.connectorID == null
                 || settings.connectorID!!.isEmpty()
@@ -71,7 +78,7 @@ abstract class ISocket(
         timer = Timer()
         timerTask = object : TimerTask() {
             override fun run() {
-                Log.d(TAG, "run: $isConnected $settings")
+                Log.d(TAG, "run ${timer.hashCode()} ISocket ${this.hashCode()}: $isConnected $settings")
             }
         }
         timer?.schedule(timerTask, 0, 8000)
@@ -82,6 +89,7 @@ abstract class ISocket(
         timerTask?.cancel()
         timerTask = null
         timer?.cancel()
+        timer?.purge()
         timer = null
     }
 

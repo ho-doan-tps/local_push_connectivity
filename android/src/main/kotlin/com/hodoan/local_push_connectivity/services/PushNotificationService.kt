@@ -62,7 +62,7 @@ class PushNotificationService : Service(), ReceiverCallback {
     private var notificationManagerId = 1
     private var settings = PluginSettings()
 
-    private lateinit var socket: ISocket
+    private var socket: ISocket? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
@@ -71,7 +71,8 @@ class PushNotificationService : Service(), ReceiverCallback {
                 CHANGE_SETTING -> {
                     p1.getStringExtra(SETTINGS_EXTRA)?.let {
                         settings = PigeonWrapper.fromString<PluginSettings>(it)
-                        socket.disconnect()
+                        socket?.release()
+                        socket = null
                         socket = ISocket.register(
                             contentResolver,
                             this@PushNotificationService,
@@ -196,14 +197,17 @@ class PushNotificationService : Service(), ReceiverCallback {
         val bundle = p0?.extras
         bundle?.getString(SETTINGS_EXTRA)?.let {
             settings = settings.copyWith(PigeonWrapper.fromString(it))
+            socket?.release()
+            socket = null
             socket = ISocket.register(contentResolver, this, settings)
-            socket.settings = settings
+            socket?.settings = settings
         }
         return null
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        socket.disconnect()
+        socket?.release()
+        socket = null
         return super.onUnbind(intent)
     }
 
@@ -216,8 +220,10 @@ class PushNotificationService : Service(), ReceiverCallback {
         val bundle = intent?.extras
         bundle?.getString(SETTINGS_EXTRA)?.let {
             settings = settings.copyWith(PigeonWrapper.fromString(it))
+            socket?.release()
+            socket = null
             socket = ISocket.register(contentResolver, this, settings)
-            socket.settings = settings
+            socket?.settings = settings
         }
         super.onStartCommand(intent, flags, startId)
 
@@ -231,7 +237,7 @@ class PushNotificationService : Service(), ReceiverCallback {
             "This is a Message service"
         )
         startForeground(101, notification)
-        socket.createSocket()
+        socket?.createSocket()
 
         return START_NOT_STICKY
     }

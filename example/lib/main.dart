@@ -66,7 +66,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  List<MessageSystemPigeon> messages = [];
+  String messages = '';
   @override
   void initState() {
     super.initState();
@@ -87,7 +87,9 @@ class _MyAppState extends State<MyApp> {
     // We also handle the message potentially returning null.
     try {
       _onMessage = LocalPushConnectivity.instance.message.listen((event) {
-        print(event.message.mPayload);
+        setState(() {
+          messages = event.message.mPayload;
+        });
       });
       await LocalPushConnectivity.instance.config(
         TCPModePigeon(
@@ -105,7 +107,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(title: const Text('Plugin example app')),
-        body: Center(child: Text('Running')),
+        body: Center(child: Text('Running: $messages')),
       ),
     );
   }

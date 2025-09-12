@@ -98,7 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               'Body': 'This message send from server',
                             },
                             'Data': {
-                              'ID': 'bla',
+                              'ID':
+                                  'bla ${DateTime.now().millisecondsSinceEpoch}',
                             }
                           };
                           soc.value?.add(jsonEncode(mess));
