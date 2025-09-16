@@ -4,17 +4,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "local_push_connectivity",
+    name: "local_push_connectivity_core",
     platforms: [
         .iOS("15.0")
     ],
     products: [
-        .library(name: "local-push-connectivity", targets: ["local_push_connectivity"])
+        .library(name: "local-push-connectivity", targets: ["local_push_connectivity_core"])
     ],
     dependencies: [],
     targets: [
         .target(
-            name: "local_push_connectivity",
+            name: "local_push_connectivity_core",
             dependencies: [],
             resources: [
                 // If your plugin requires a privacy manifest, for example if it uses any required
