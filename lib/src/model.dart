@@ -34,3 +34,27 @@ class MessageResponse {
       MessageResponse.fromJson(jsonDecode(str));
   Map<String, dynamic> toJson() => _$MessageResponseToJson(this);
 }
+
+@JsonSerializable()
+class RegisterMessage {
+  RegisterMessage({
+    required this.messageType,
+    required this.sendConnectorID,
+    required this.sendDeviceId,
+    required this.systemType,
+  });
+
+  @JsonKey(name: 'MessageType')
+  final String messageType;
+
+  @JsonKey(name: 'SendConnectorID')
+  final String sendConnectorID;
+  @JsonKey(name: 'SendDeviceId')
+  final String sendDeviceId;
+  @JsonKey(name: 'SystemType')
+  final int systemType;
+
+  factory RegisterMessage.fromJson(Map<String, dynamic> json) =>
+      _$RegisterMessageFromJson(json);
+  Map<String, dynamic> toJson() => _$RegisterMessageToJson(this);
+}

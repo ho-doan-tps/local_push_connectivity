@@ -13,7 +13,8 @@ public class WebSocketClient: ISocket {
         let host = settings.host ?? ""
         let port = settings.port ?? -1
         let path = settings.wsPath ?? ""
-        guard let url = URL(string: "\(origin)://\(host):\(port)/\(path)") else { return
+        guard let url = URL(string: "\(origin)://\(host):\(port)\(path)") else { 
+            return
         }
         
         self.state = .connecting
@@ -27,6 +28,8 @@ public class WebSocketClient: ISocket {
         connection?.resume()
         self.state = .connected
         
+        self.heartbeat()
+        
         let register = RegisterModel(messageType: "register", sendConnectorID: "4", sendDeviceId: settings.deviceId ?? "", systemType: 1)
         guard let encoded = try? JSONEncoder().encode(register) else {
             self.disconnect()
@@ -36,12 +39,43 @@ public class WebSocketClient: ISocket {
         
         let data = URLSessionWebSocketTask.Message.string(json)
         self.connection?.send(data) { error in
-            if let error = error {
-                print("send data error: \(error)")
+            if let _ = error {
+                self.mReconnect()
                 return
             }
             self.receiveData()
         }
+        
+        if self.connection == nil {
+            self.mReconnect()
+        }
+    }
+    
+    public override func heartbeat() {
+        stopHeartbeat()
+        let timer = DispatchSource.makeTimerSource(queue: dispatchPingQueue)
+        timer.schedule(deadline: .now() + 10, repeating: 10)
+        timer.setEventHandler {
+            [weak self] in
+            self?.connection?.sendPing { error in
+                if let _ = error {
+                    self?.mReconnect()
+                }
+            }
+        }
+        pingTimer = timer
+        timer.resume()
+    }
+    
+    public override func reconnect() {
+        if state != .disconnected { return }
+        self.disconnect()
+        self.retry(after: .seconds(5), error: nil)
+    }
+    
+    private func mReconnect() {
+        self.disconnect()
+        self.reconnect()
     }
     
     public override func disconnect() {
@@ -50,6 +84,7 @@ public class WebSocketClient: ISocket {
             self.state = .disconnecting
             self.cancelRetry()
             self.connection?.cancel()
+            self.stopHeartbeat()
             self.connection = nil
             self.state = .disconnected
         }
@@ -58,8 +93,10 @@ public class WebSocketClient: ISocket {
     public override func retry(after delay: DispatchTimeInterval, error: NWError?) {
         retryWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self, !(self.retryWorkItem?.isCancelled ?? true) else { return }
+            guard let self = self, !(self.retryWorkItem?.isCancelled ?? true)
+            else { return }
             print("retrying to connect with remote server...")
+            requestNotificationDebug(payload: "retrying connect....")
             self.connect()
         }
         retryWorkItem = workItem
@@ -77,8 +114,7 @@ public class WebSocketClient: ISocket {
             switch result {
             case .failure(let error):
                 print("ws error: \(error.localizedDescription)")
-                self.disconnect()
-                self.retry(after: .seconds(5), error: nil)
+                self.mReconnect()
             case .success(let message):
                 switch message {
                 case .data(let data):
@@ -94,7 +130,7 @@ public class WebSocketClient: ISocket {
                     }
                 @unknown default:
                     print("ws error receive: \(result)")
-                    fatalError("ws error receive")
+                    self.mReconnect()
                 }
             }
         }

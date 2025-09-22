@@ -25,7 +25,6 @@ import com.hodoan.local_push_connectivity.sockets.ISocket
 import com.hodoan.local_push_connectivity.wrapper.MessageResponse
 import com.hodoan.local_push_connectivity.wrapper.PigeonWrapper
 import com.hodoan.local_push_connectivity.wrapper.PluginSettings
-import java.security.cert.X509Certificate
 
 interface ReceiverCallback {
     fun newMessage(message: String)
@@ -244,6 +243,7 @@ class PushNotificationService : Service(), ReceiverCallback {
 
     override fun newMessage(message: String) {
         try {
+            if(message == "{\"type\":\"pong\"}") return
             val notificationResponse = PigeonWrapper.fromString<MessageResponse>(message)
             if (LocalPushConnectivityPlugin.flutterApi != null) {
                 Handler(Looper.getMainLooper()).post {

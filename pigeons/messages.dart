@@ -76,14 +76,6 @@ class IosSettingsPigeon {
   const IosSettingsPigeon({this.ssid, this.enableSSID = true});
 }
 
-// TODO: WebSettingsPigeon not supported yet
-// class WebSettingsPigeon {
-//   final String Function(String)? replace;
-//   final bool Function(String)? reload;
-
-//   const WebSettingsPigeon({this.replace, this.reload});
-// }
-
 @FlutterApi()
 abstract class LocalPushConnectivityPigeonFlutterApi {
   @async

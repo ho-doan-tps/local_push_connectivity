@@ -198,30 +198,34 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Listen for incoming connections.
     await for (var request in server) {
-      if (request.uri.path == '/ws/') {
+      if (request.uri.path == '/ws/' || request.uri.path == '/ws') {
         var websocket = await WebSocketTransformer.upgrade(request);
         log('WClient connected: ${websocket.hashCode}');
 
         websocket.listen(
           (message) {
-            log(message.runtimeType.toString());
+            log('${message.runtimeType} $message');
             if (message is String) {
               try {
                 final json = jsonDecode(message);
-                final mess = MessageRegister.fromJson(json);
-                if (mounted) {
-                  final socs = clients[mess.sendId];
-                  setState(() {
-                    clients = Map.from(clients)
-                      ..addAll({
-                        mess.sendId: Map<String, WebSocket>.from(socs ?? {})
-                          ..addAll(
-                            {
-                              mess.deviceId: websocket,
-                            },
-                          )
-                      });
-                  });
+                if (json['type'] == 'ping') {
+                  websocket.add(jsonEncode({'type': 'pong'}));
+                } else {
+                  final mess = MessageRegister.fromJson(json);
+                  if (mounted) {
+                    final socs = clients[mess.sendId];
+                    setState(() {
+                      clients = Map.from(clients)
+                        ..addAll({
+                          mess.sendId: Map<String, WebSocket>.from(socs ?? {})
+                            ..addAll(
+                              {
+                                mess.deviceId: websocket,
+                              },
+                            )
+                        });
+                    });
+                  }
                 }
               } catch (e, s) {
                 log(e.toString(), stackTrace: s);

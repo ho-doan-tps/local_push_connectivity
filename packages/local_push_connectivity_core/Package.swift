@@ -9,7 +9,7 @@ let package = Package(
         .iOS("15.0")
     ],
     products: [
-        .library(name: "local-push-connectivity", targets: ["local_push_connectivity_core"])
+        .library(name: "local-push-connectivity-core", targets: ["local_push_connectivity_core"])
     ],
     dependencies: [],
     targets: [

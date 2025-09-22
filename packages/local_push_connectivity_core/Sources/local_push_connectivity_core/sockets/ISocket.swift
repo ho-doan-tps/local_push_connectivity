@@ -91,8 +91,11 @@ public class ISocket {
     
     public var state: State = .disconnected
     let dispatchQueue = DispatchQueue(label: "NetworkSession.dispatchQueue",qos: .background)
+    let dispatchPingQueue = DispatchQueue(label: "NetworkSession.dispatchPingQueue")
     let retryInterval = DispatchTimeInterval.seconds(5)
     var retryWorkItem: DispatchWorkItem?
+    
+    var pingTimer: DispatchSourceTimer? = nil
     
     private static let settingsKey = "settings"
     private static let appStateKey = "isExecutingInBackground"
@@ -101,7 +104,7 @@ public class ISocket {
     
     public init() {}
     
-    static func fetchSettings() -> Settings {
+    public static func fetchSettings() -> Settings {
         guard let encodedSettings = userDefaults.data(forKey: settingsKey) else {
             return Settings()
         }
@@ -113,6 +116,15 @@ public class ISocket {
             print("Error decoding settings - \(error)")
             return Settings()
         }
+    }
+    
+    public func heartbeat(){
+        fatalError("This method must be overridden in a subclass")
+    }
+    
+    func stopHeartbeat() {
+        pingTimer?.cancel()
+        pingTimer = nil
     }
     
     public func connect(){
@@ -128,6 +140,10 @@ public class ISocket {
     }
     
     public func cancelRetry() {
+        fatalError("This method must be overridden in a subclass")
+    }
+    
+    public func reconnect() {
         fatalError("This method must be overridden in a subclass")
     }
     
@@ -159,6 +175,25 @@ public class ISocket {
                 content.interruptionLevel = .passive
             }
         }
+        content.userInfo = [
+            "payload": payload
+        ]
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("submitting error: \(error)")
+                return
+            }
+        }
+    }
+    
+    /// for debug
+    public func requestNotificationDebug(payload: String) {
+        let content = UNMutableNotificationContent()
+        content.title = payload
+        content.body = "debug"
+        content.sound = .default
         content.userInfo = [
             "payload": payload
         ]

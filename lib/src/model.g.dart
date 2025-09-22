@@ -25,3 +25,19 @@ Map<String, dynamic> _$MessageResponseToJson(MessageResponse instance) =>
       'Notification': instance.notification,
       'mPayload': instance.mPayload,
     };
+
+RegisterMessage _$RegisterMessageFromJson(Map<String, dynamic> json) =>
+    RegisterMessage(
+      messageType: json['MessageType'] as String,
+      sendConnectorID: json['SendConnectorID'] as String,
+      sendDeviceId: json['SendDeviceId'] as String,
+      systemType: (json['SystemType'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$RegisterMessageToJson(RegisterMessage instance) =>
+    <String, dynamic>{
+      'MessageType': instance.messageType,
+      'SendConnectorID': instance.sendConnectorID,
+      'SendDeviceId': instance.sendDeviceId,
+      'SystemType': instance.systemType,
+    };

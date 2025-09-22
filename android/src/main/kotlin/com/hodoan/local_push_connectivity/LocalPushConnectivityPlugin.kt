@@ -24,33 +24,9 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.PluginRegistry
 
-class OnMessageEvent : OnMessageStreamHandler() {
-    private var eventSink: PigeonEventSink<String>? = null
-
-    override fun onListen(p0: Any?, sink: PigeonEventSink<String>) {
-        eventSink = sink
-    }
-
-    override fun onCancel(p0: Any?) {
-        eventSink = null
-        super.onCancel(p0)
-    }
-
-    fun success(message: String) {
-        Handler(Looper.getMainLooper()).post {
-            eventSink?.success(message)
-        }
-    }
-
-    fun error(err: String, message: String?) {
-        eventSink?.error("ERROR", err, message)
-    }
-}
-
 class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterPlugin,
     PluginRegistry.RequestPermissionsResultListener, PluginRegistry.NewIntentListener,
     ActivityAware {
-    private val messageEvent = OnMessageEvent()
     private lateinit var pref: SharedPreferences
     private lateinit var context: Context
     private var activity: Activity? = null
@@ -71,7 +47,6 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
             settings = PigeonWrapper.fromString(settingStr)
         }
         LocalPushConnectivityPigeonHostApi.setUp(binaryMessenger, this)
-        OnMessageStreamHandler.register(binaryMessenger, messageEvent)
     }
 
     override fun initialize(
@@ -205,16 +180,9 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
         binding.addRequestPermissionsResultListener(this)
         binding.addOnNewIntentListener(this)
 
-        var intent = activity!!.intent
-        val newMessage = intent.getStringExtra("payload")
-
-        Log.d(TAG, "onAttachedToActivity: $newMessage")
-
         activity?.application?.registerActivityLifecycleCallbacks(object :
             Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(p0: Activity, p1: Bundle?) {
-//                val i = Int
-            }
+            override fun onActivityCreated(p0: Activity, p1: Bundle?) {}
 
             override fun onActivityDestroyed(p0: Activity) {}
 
@@ -228,21 +196,7 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
 
             override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {}
 
-            override fun onActivityStarted(p0: Activity) {
-                try {
-                    intent = p0.intent
-                    if (intent.getStringExtra("payload") != null) {
-                        if (newMessage != null) {
-                            intent.removeExtra("payload")
-                            Handler(Looper.getMainLooper()).post {
-                                messageEvent.success(newMessage)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "onActivityStarted: ${e.message} ")
-                }
-            }
+            override fun onActivityStarted(p0: Activity) {}
 
             override fun onActivityStopped(p0: Activity) {
                 flutterApi = null
@@ -274,9 +228,10 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
     }
 
     override fun onNewIntent(intent: Intent): Boolean {
+        flutterApi = LocalPushConnectivityPigeonFlutterApi(binaryMessenger)
         val newMessage = intent.getStringExtra("payload")
         newMessage?.let {
-            Log.d(TAG, "onNewIntent: $newMessage $flutterApi $messageEvent")
+            Log.d(TAG, "onNewIntent: $newMessage $flutterApi")
             val m = MessageResponsePigeon(
                 NotificationPigeon("a", "a"), it
             )
@@ -284,9 +239,6 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
                 m
             ) { result ->
                 Log.d(TAG, "onNewIntent: ${result.isSuccess}")
-            }
-            if (flutterApi == null) {
-                messageEvent.success(newMessage)
             }
         }
         return true

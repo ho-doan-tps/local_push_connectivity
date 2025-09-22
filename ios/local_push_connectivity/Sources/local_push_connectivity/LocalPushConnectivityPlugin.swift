@@ -6,11 +6,24 @@ import Combine
 
 public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConnectivityPigeonHostApi {
     private let dispatchQueue = DispatchQueue(label: "PushConfigurationManager.dispatchQueue", qos: .background)
+
+    private static var backgroundStatusCancellable: AnyCancellable?
     
     private static let settingsKey = "settings"
     private static let appStateKey = "isExecutingInBackground"
     private static let groupId = Bundle.main.object(forInfoDictionaryKey: "GroupNEAppPushLocal") as? String
-    private static let userDefaults: UserDefaults = groupId != nil ? UserDefaults(suiteName: groupId)! : UserDefaults.standard
+    private static let userDefaults: UserDefaults = {
+        if let groupId = groupId,
+           let defaults = UserDefaults(suiteName: groupId) {
+            defaults.set("hello", forKey: "testKey")
+            defaults.synchronize()
+            print("✅ App Group write success to \(groupId)")
+            return defaults
+        } else {
+            print("⚠️ App Group không khả dụng, fallback về UserDefaults.standard")
+            return UserDefaults.standard
+        }
+    }()
     
     private var settings: Settings!
     
@@ -18,16 +31,18 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
     private let pushProviderBundleIdentifier: String? = Bundle.main.object(forInfoDictionaryKey: "NEAppPushBundleId") as? String
     private var pushManager: NEAppPushManager? = nil
     
+    private var flutterApi: LocalPushConnectivityPigeonFlutterApi? = nil
+    
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = LocalPushConnectivityPlugin()
         instance.settings = Self.fetchSettings()
         LocalPushConnectivityPigeonHostApiSetup.setUp(binaryMessenger: registrar.messenger(), api: instance)
+        instance.flutterApi = LocalPushConnectivityPigeonFlutterApi(binaryMessenger: registrar.messenger())
         UNUserNotificationCenter.current().delegate = instance
     }
     
     private func initializePush() {
-        self.dispatchQueue.async {
-            [weak self] in
+        self.dispatchQueue.async { [weak self] in
             guard let self = self else { return }
             guard let pushProviderBundleIdentifier = pushProviderBundleIdentifier else { return }
             NEAppPushManager.loadAllFromPreferences { managers, error in
@@ -35,6 +50,8 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
                     print("Failed to load all managers from preferences: \(error)")
                     return
                 }
+                
+                print("manager length: \(managers?.count)")
                 
                 guard let manager = managers?.first(where: { !$0.matchSSIDs.isEmpty }) else { return }
                 manager.delegate = self
@@ -50,6 +67,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
                 self.pushManager = pushManager
                 self.pushManager?.isEnabled = true
                 self.pushManager?.delegate = self
+                print("preparePush ok")
             } else {
                 print("preparePush error: \(error)")
             }
@@ -84,6 +102,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
     func initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void){
         if ios == nil {
             completion(.failure(NSError(domain: "ios settings invalid", code: 1)))
+            return
         }
         
         var settings = Settings()
@@ -95,6 +114,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         settings.useTcp = mode.connectionType == .tcp
         settings.systemType = 1
         settings.connectorID = "4"
+        settings.deviceId = UIDevice.current.identifierForVendor?.uuidString
         if let ssid = ios?.ssid {
             settings.ssid = [ssid]
         }
@@ -102,7 +122,26 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         self.settings = self.settings.copyWith(settings: settings)
         try? self.set(settings: self.settings)
         
-        initializePush()
+        NEAppPushManager.loadAllFromPreferences { managers, error in
+            if let error = error {
+                print("Failed to load all managers from preferences: \(error)")
+                return
+            }
+            
+            print("manager length: \(managers?.count)")
+            
+            let managersLst = managers
+            
+            for manager in managersLst ?? [] {
+                manager.removeFromPreferences { [weak self] error in
+                    if let error = error {
+                        print("error remove \(error)")
+                    }
+                    print("✅ remove ok")
+                }
+            }
+            self.initializePush()
+        }
         
         completion(.success(true))
     }
@@ -147,6 +186,8 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         let encoder = JSONEncoder()
         let encodedSettings = try encoder.encode(settings)
         Self.userDefaults.set(encodedSettings, forKey: Self.settingsKey)
+        
+        self.savePush(pushManager: self.pushManager ?? NEAppPushManager())
     }
     
     static private func fetchSettings() -> Settings {
@@ -181,7 +222,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
                 .eraseToAnyPublisher()
         }()
         
-        isExecutingInBackgroundPublisher.sink { status in
+        backgroundStatusCancellable = isExecutingInBackgroundPublisher.sink { status in
             Self.userDefaults.set(status, forKey: Self.appStateKey)
         }
     }
@@ -195,10 +236,34 @@ extension LocalPushConnectivityPlugin: NEAppPushDelegate {
 
 extension LocalPushConnectivityPlugin: UNUserNotificationCenterDelegate {
     public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        print("userNotificationCenter didReceive response: \(response.notification.request.content.userInfo["payload"])")
+        if let payload = response.notification.request.content.userInfo["payload"] as? String {
+            flutterApi?.onMessage(message: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload)) {
+                result in
+                switch result {
+                case .failure(let error):
+                    print("send new message background error: \(error)")
+                case .success(()):
+                    print("send message background ok")
+                }
+            }
+        }
         completionHandler()
     }
     
     public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        print("userNotificationCenter willPresent notification: \(notification.request.content.userInfo["payload"])")
+        if let payload = notification.request.content.userInfo["payload"] as? String {
+            flutterApi?.onMessage(message: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload)) {
+                result in
+                switch result {
+                case .failure(let error):
+                    print("send new message in app error: \(error)")
+                case .success(()):
+                    print("send message in app ok")
+                }
+            }
+        }
         completionHandler([])
     }
 }

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:local_push_connectivity/local_push_connectivity.dart';
 
 class MyHttpOverrides extends HttpOverrides {
@@ -34,7 +33,7 @@ void main() async {
           channelNotification:
               'com.hodoan.local_push_connectivity_example.notification',
         ),
-        ios: IosSettingsPigeon(ssid: 'HoDoanWifi', enableSSID: true),
+        ios: IosSettingsPigeon(ssid: 'TPSSmartoffice', enableSSID: true),
         // web: const WebSettings(),
         mode: TCPModePigeon(
           // host: 'ho-doan.com',
@@ -93,13 +92,15 @@ class _MyAppState extends State<MyApp> {
       });
       await LocalPushConnectivity.instance.config(
         TCPModePigeon(
-          host: '192.168.50.66',
+          host: '192.168.50.42',
           port: 4040,
           connectionType: ConnectionType.ws,
           path: '/ws/',
         ),
       );
-    } on PlatformException {}
+    } catch (e, s) {
+      log(e.toString(), stackTrace: s);
+    }
   }
 
   @override
@@ -108,6 +109,12 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         appBar: AppBar(title: const Text('Plugin example app')),
         body: Center(child: Text('Running: $messages')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            LocalPushConnectivity.instance.stop();
+          },
+          child: const Icon(Icons.send),
+        ),
       ),
     );
   }
