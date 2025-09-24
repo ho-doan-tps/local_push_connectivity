@@ -5,6 +5,8 @@
 
 #include "resource.h"
 
+#include "local_push_connectivity/local_push_connectivity_plugin_c_api.h"
+
 namespace {
 
 /// Window attribute that enables dark mode window decorations.
@@ -155,22 +157,24 @@ bool Win32Window::Show() {
 
 // static
 LRESULT CALLBACK Win32Window::WndProc(HWND const window,
-                                      UINT const message,
-                                      WPARAM const wparam,
-                                      LPARAM const lparam) noexcept {
-  if (message == WM_NCCREATE) {
-    auto window_struct = reinterpret_cast<CREATESTRUCT*>(lparam);
-    SetWindowLongPtr(window, GWLP_USERDATA,
-                     reinterpret_cast<LONG_PTR>(window_struct->lpCreateParams));
+    UINT const message,
+    WPARAM const wparam,
+    LPARAM const lparam) noexcept {
+    LocalPushConnectivityPluginHandleMessage(window, message, lparam);
+    if (message == WM_NCCREATE) {
+        auto window_struct = reinterpret_cast<CREATESTRUCT*>(lparam);
+        SetWindowLongPtr(window, GWLP_USERDATA,
+            reinterpret_cast<LONG_PTR>(window_struct->lpCreateParams));
 
-    auto that = static_cast<Win32Window*>(window_struct->lpCreateParams);
-    EnableFullDpiSupportIfAvailable(window);
-    that->window_handle_ = window;
-  } else if (Win32Window* that = GetThisFromHandle(window)) {
-    return that->MessageHandler(window, message, wparam, lparam);
-  }
+        auto that = static_cast<Win32Window*>(window_struct->lpCreateParams);
+        EnableFullDpiSupportIfAvailable(window);
+        that->window_handle_ = window;
+    }
+    else if (Win32Window* that = GetThisFromHandle(window)) {
+        return that->MessageHandler(window, message, wparam, lparam);
+    }
 
-  return DefWindowProc(window, message, wparam, lparam);
+    return DefWindowProc(window, message, wparam, lparam);
 }
 
 LRESULT

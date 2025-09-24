@@ -10,31 +10,31 @@ import 'package:pigeon/pigeon.dart';
     kotlinOut:
         'android/src/main/kotlin/com/hodoan/local_push_connectivity/Messages.g.kt',
     kotlinOptions: KotlinOptions(package: 'com.hodoan.local_push_connectivity'),
-    cppHeaderOut: 'windows/runner/messages.g.h',
+    cppHeaderOut: 'windows/messages.g.h',
     cppOptions: CppOptions(namespace: 'local_push_connectivity'),
-    cppSourceOut: 'windows/runner/messages.g.cpp',
+    cppSourceOut: 'windows/messages.g.cpp',
   ),
 )
 enum ConnectionType { tcp, tcpTls, ws, wss }
 
 class TCPModePigeon {
-  final String host;
-  final int port;
-  final ConnectionType connectionType;
+  String host;
+  int port;
+  ConnectionType connectionType;
 
   /// Path for ws and wss
-  final String? path;
+  String? path;
 
   /// for tcpTls
-  final String? publicHasKey;
+  String? publicHasKey;
 
   /// for tcpTls & Platform windows
-  final String? cnName;
+  String? cnName;
 
   /// for tcpTls & Platform windows
-  final String? dnsName;
+  String? dnsName;
 
-  const TCPModePigeon({
+  TCPModePigeon({
     required this.host,
     required this.port,
     required this.connectionType,
@@ -46,22 +46,22 @@ class TCPModePigeon {
 }
 
 class AndroidSettingsPigeon {
-  final String icon;
-  final String channelNotification;
+  String icon;
+  String channelNotification;
 
-  const AndroidSettingsPigeon({
+  AndroidSettingsPigeon({
     required this.icon,
     required this.channelNotification,
   });
 }
 
 class WindowsSettingsPigeon {
-  final String displayName;
-  final String bundleId;
-  final String icon;
-  final String iconContent;
+  String displayName;
+  String bundleId;
+  String icon;
+  String iconContent;
 
-  const WindowsSettingsPigeon({
+  WindowsSettingsPigeon({
     required this.displayName,
     required this.bundleId,
     required this.icon,
@@ -70,16 +70,10 @@ class WindowsSettingsPigeon {
 }
 
 class IosSettingsPigeon {
-  final String? ssid;
-  final bool enableSSID;
+  String? ssid;
+  bool enableSSID;
 
-  const IosSettingsPigeon({this.ssid, this.enableSSID = true});
-}
-
-@FlutterApi()
-abstract class LocalPushConnectivityPigeonFlutterApi {
-  @async
-  void onMessage(MessageResponsePigeon message);
+  IosSettingsPigeon({this.ssid, this.enableSSID = true});
 }
 
 @HostApi()
@@ -102,34 +96,34 @@ abstract class LocalPushConnectivityPigeonHostApi {
   bool stop();
 }
 
-class MessageSystemPigeon {
-  final bool inApp;
-  final MessageResponsePigeon message;
-
-  const MessageSystemPigeon({required this.inApp, required this.message});
-}
-
 class NotificationPigeon {
-  final String title;
-  final String body;
+  String title;
+  String body;
 
   NotificationPigeon({required this.title, required this.body});
 }
 
 class MessageResponsePigeon {
-  final NotificationPigeon notification;
-  final String mPayload;
+  NotificationPigeon notification;
+  String mPayload;
 
   MessageResponsePigeon({required this.mPayload, required this.notification});
 }
 
-class RegisterMessagePigeon {
-  final String messageType;
-  final String sendConnectorID;
-  final String sendDeviceId;
-  final int systemType;
+class MessageSystemPigeon {
+  bool inApp;
+  MessageResponsePigeon mrp;
 
-  const RegisterMessagePigeon({
+  MessageSystemPigeon({required this.inApp, required this.mrp});
+}
+
+class RegisterMessagePigeon {
+  String messageType;
+  String sendConnectorID;
+  String sendDeviceId;
+  int systemType;
+
+  RegisterMessagePigeon({
     required this.messageType,
     required this.sendConnectorID,
     required this.systemType,
@@ -138,21 +132,21 @@ class RegisterMessagePigeon {
 }
 
 class PluginSettingsPigeon {
-  final String? host;
-  final String? deviceId;
-  final String? connectorID;
-  final int? systemType;
-  final String? iconNotification;
-  final int? port;
-  final String? channelNotification;
+  String? host;
+  String? deviceId;
+  String? connectorID;
+  int? systemType;
+  String? iconNotification;
+  int? port;
+  String? channelNotification;
 
-  final bool? wss;
+  bool? wss;
   //default for ws path
-  final String? wsPath;
-  final bool? useTcp;
-  final String? publicKey;
+  String? wsPath;
+  bool? useTcp;
+  String? publicKey;
 
-  const PluginSettingsPigeon({
+  PluginSettingsPigeon({
     required this.host,
     required this.deviceId,
     required this.connectorID,
@@ -165,4 +159,10 @@ class PluginSettingsPigeon {
     required this.useTcp,
     required this.publicKey,
   });
+}
+
+@FlutterApi()
+abstract class LocalPushConnectivityPigeonFlutterApi {
+  @async
+  void onMessage(MessageResponsePigeon mrp);
 }

@@ -48,8 +48,8 @@ template<class T> class ErrorOr {
   const FlutterError& error() const { return std::get<FlutterError>(v_); };
 
  private:
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   ErrorOr() = default;
   T TakeValue() && { return std::get<T>(std::move(v_)); }
 
@@ -116,8 +116,8 @@ class TCPModePigeon {
  private:
   static TCPModePigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::string host_;
   int64_t port_;
@@ -146,8 +146,8 @@ class AndroidSettingsPigeon {
  private:
   static AndroidSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::string icon_;
   std::string channel_notification_;
@@ -179,8 +179,8 @@ class WindowsSettingsPigeon {
  private:
   static WindowsSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::string display_name_;
   std::string bundle_id_;
@@ -210,41 +210,11 @@ class IosSettingsPigeon {
  private:
   static IosSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::optional<std::string> ssid_;
   bool enable_s_s_i_d_;
-};
-
-
-// Generated class from Pigeon that represents data sent in messages.
-class MessageSystemPigeon {
- public:
-  // Constructs an object setting all fields.
-  explicit MessageSystemPigeon(
-    bool in_app,
-    const MessageResponsePigeon& message);
-
-  ~MessageSystemPigeon() = default;
-  MessageSystemPigeon(const MessageSystemPigeon& other);
-  MessageSystemPigeon& operator=(const MessageSystemPigeon& other);
-  MessageSystemPigeon(MessageSystemPigeon&& other) = default;
-  MessageSystemPigeon& operator=(MessageSystemPigeon&& other) noexcept = default;
-  bool in_app() const;
-  void set_in_app(bool value_arg);
-
-  const MessageResponsePigeon& message() const;
-  void set_message(const MessageResponsePigeon& value_arg);
-
- private:
-  static MessageSystemPigeon FromEncodableList(const flutter::EncodableList& list);
-  flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
-  friend class LocalPushConnectivityPigeonHostApi;
-  friend class PigeonInternalCodecSerializer;
-  bool in_app_;
-  std::unique_ptr<MessageResponsePigeon> message_;
 };
 
 
@@ -266,8 +236,8 @@ class NotificationPigeon {
   static NotificationPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
   friend class MessageResponsePigeon;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::string title_;
   std::string body_;
@@ -297,11 +267,41 @@ class MessageResponsePigeon {
   static MessageResponsePigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
   friend class MessageSystemPigeon;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::unique_ptr<NotificationPigeon> notification_;
   std::string m_payload_;
+};
+
+
+// Generated class from Pigeon that represents data sent in messages.
+class MessageSystemPigeon {
+ public:
+  // Constructs an object setting all fields.
+  explicit MessageSystemPigeon(
+    bool in_app,
+    const MessageResponsePigeon& mrp);
+
+  ~MessageSystemPigeon() = default;
+  MessageSystemPigeon(const MessageSystemPigeon& other);
+  MessageSystemPigeon& operator=(const MessageSystemPigeon& other);
+  MessageSystemPigeon(MessageSystemPigeon&& other) = default;
+  MessageSystemPigeon& operator=(MessageSystemPigeon&& other) noexcept = default;
+  bool in_app() const;
+  void set_in_app(bool value_arg);
+
+  const MessageResponsePigeon& mrp() const;
+  void set_mrp(const MessageResponsePigeon& value_arg);
+
+ private:
+  static MessageSystemPigeon FromEncodableList(const flutter::EncodableList& list);
+  flutter::EncodableList ToEncodableList() const;
+  friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
+  friend class PigeonInternalCodecSerializer;
+  bool in_app_;
+  std::unique_ptr<MessageResponsePigeon> mrp_;
 };
 
 
@@ -330,8 +330,8 @@ class RegisterMessagePigeon {
  private:
   static RegisterMessagePigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::string message_type_;
   std::string send_connector_i_d_;
@@ -407,8 +407,8 @@ class PluginSettingsPigeon {
  private:
   static PluginSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
-  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
   std::optional<std::string> host_;
   std::optional<std::string> device_id_;
@@ -439,23 +439,6 @@ class PigeonInternalCodecSerializer : public flutter::StandardCodecSerializer {
   flutter::EncodableValue ReadValueOfType(
     uint8_t type,
     flutter::ByteStreamReader* stream) const override;
-};
-
-// Generated class from Pigeon that represents Flutter messages that can be called from C++.
-class LocalPushConnectivityPigeonFlutterApi {
- public:
-  LocalPushConnectivityPigeonFlutterApi(flutter::BinaryMessenger* binary_messenger);
-  LocalPushConnectivityPigeonFlutterApi(
-    flutter::BinaryMessenger* binary_messenger,
-    const std::string& message_channel_suffix);
-  static const flutter::StandardMessageCodec& GetCodec();
-  void OnMessage(
-    const MessageResponsePigeon& message,
-    std::function<void(void)>&& on_success,
-    std::function<void(const FlutterError&)>&& on_error);
- private:
-  flutter::BinaryMessenger* binary_messenger_;
-  std::string message_channel_suffix_;
 };
 
 // Generated interface from Pigeon that represents a handler of messages from Flutter.
@@ -493,5 +476,22 @@ class LocalPushConnectivityPigeonHostApi {
  protected:
   LocalPushConnectivityPigeonHostApi() = default;
 };
+// Generated class from Pigeon that represents Flutter messages that can be called from C++.
+class LocalPushConnectivityPigeonFlutterApi {
+ public:
+  LocalPushConnectivityPigeonFlutterApi(flutter::BinaryMessenger* binary_messenger);
+  LocalPushConnectivityPigeonFlutterApi(
+    flutter::BinaryMessenger* binary_messenger,
+    const std::string& message_channel_suffix);
+  static const flutter::StandardMessageCodec& GetCodec();
+  void OnMessage(
+    const MessageResponsePigeon& mrp,
+    std::function<void(void)>&& on_success,
+    std::function<void(const FlutterError&)>&& on_error);
+ private:
+  flutter::BinaryMessenger* binary_messenger_;
+  std::string message_channel_suffix_;
+};
+
 }  // namespace local_push_connectivity
 #endif  // PIGEON_MESSAGES_G_H_

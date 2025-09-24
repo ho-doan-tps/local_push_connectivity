@@ -10,3 +10,12 @@ void LocalPushConnectivityPluginCApiRegisterWithRegistrar(
       flutter::PluginRegistrarManager::GetInstance()
           ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar));
 }
+
+int LocalPushConnectivityRegisterProcess(
+    std::wstring title, wchar_t* command_line) {
+    return local_push_connectivity::LocalPushConnectivityPlugin::RegisterProcess(title, command_line);
+}
+void LocalPushConnectivityPluginHandleMessage(
+    HWND const window, UINT const message, LPARAM const lparam) {
+    local_push_connectivity::LocalPushConnectivityPlugin::HandleMessage(window, message, lparam);
+}

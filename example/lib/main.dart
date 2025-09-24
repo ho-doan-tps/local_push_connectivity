@@ -87,7 +87,7 @@ class _MyAppState extends State<MyApp> {
     try {
       _onMessage = LocalPushConnectivity.instance.message.listen((event) {
         setState(() {
-          messages = event.message.mPayload;
+          messages = event.mrp.mPayload;
         });
       });
       await LocalPushConnectivity.instance.config(
@@ -111,6 +111,16 @@ class _MyAppState extends State<MyApp> {
         body: Center(child: Text('Running: $messages')),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
+            if (Platform.isWindows) {
+              LocalPushConnectivity.instance.config(
+                TCPModePigeon(
+                  host: '192.168.50.42',
+                  port: 4040,
+                  connectionType: ConnectionType.ws,
+                  path: '/ws/',
+                ),
+              );
+            }
             LocalPushConnectivity.instance.stop();
           },
           child: const Icon(Icons.send),

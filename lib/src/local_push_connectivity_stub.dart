@@ -34,7 +34,7 @@ class LocalPushConnectivity
 
   @override
   Future<void> onMessage(MessageResponsePigeon message) async {
-    _controller.add(MessageSystemPigeon(inApp: true, message: message));
+    _controller.add(MessageSystemPigeon(inApp: true, mrp: message));
     return;
   }
 
@@ -152,7 +152,7 @@ class LocalPushConnectivity
               _controller.add(
                 MessageSystemPigeon(
                   inApp: true,
-                  message: MessageResponsePigeon(
+                  mrp: MessageResponsePigeon(
                     notification: NotificationPigeon(
                       title: message.notification.title,
                       body: message.notification.body,

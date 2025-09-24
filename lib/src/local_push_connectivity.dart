@@ -19,7 +19,7 @@ class LocalPushConnectivity extends LocalPushConnectivityPigeonHostApi
 
   @override
   Future<void> onMessage(MessageResponsePigeon message) async {
-    _controller.add(MessageSystemPigeon(inApp: true, message: message));
+    _controller.add(MessageSystemPigeon(inApp: true, mrp: message));
     return;
   }
 

@@ -329,57 +329,6 @@ IosSettingsPigeon IosSettingsPigeon::FromEncodableList(const EncodableList& list
   return decoded;
 }
 
-// MessageSystemPigeon
-
-MessageSystemPigeon::MessageSystemPigeon(
-  bool in_app,
-  const MessageResponsePigeon& message)
- : in_app_(in_app),
-    message_(std::make_unique<MessageResponsePigeon>(message)) {}
-
-MessageSystemPigeon::MessageSystemPigeon(const MessageSystemPigeon& other)
- : in_app_(other.in_app_),
-    message_(std::make_unique<MessageResponsePigeon>(*other.message_)) {}
-
-MessageSystemPigeon& MessageSystemPigeon::operator=(const MessageSystemPigeon& other) {
-  in_app_ = other.in_app_;
-  message_ = std::make_unique<MessageResponsePigeon>(*other.message_);
-  return *this;
-}
-
-bool MessageSystemPigeon::in_app() const {
-  return in_app_;
-}
-
-void MessageSystemPigeon::set_in_app(bool value_arg) {
-  in_app_ = value_arg;
-}
-
-
-const MessageResponsePigeon& MessageSystemPigeon::message() const {
-  return *message_;
-}
-
-void MessageSystemPigeon::set_message(const MessageResponsePigeon& value_arg) {
-  message_ = std::make_unique<MessageResponsePigeon>(value_arg);
-}
-
-
-EncodableList MessageSystemPigeon::ToEncodableList() const {
-  EncodableList list;
-  list.reserve(2);
-  list.push_back(EncodableValue(in_app_));
-  list.push_back(CustomEncodableValue(*message_));
-  return list;
-}
-
-MessageSystemPigeon MessageSystemPigeon::FromEncodableList(const EncodableList& list) {
-  MessageSystemPigeon decoded(
-    std::get<bool>(list[0]),
-    std::any_cast<const MessageResponsePigeon&>(std::get<CustomEncodableValue>(list[1])));
-  return decoded;
-}
-
 // NotificationPigeon
 
 NotificationPigeon::NotificationPigeon(
@@ -469,6 +418,57 @@ MessageResponsePigeon MessageResponsePigeon::FromEncodableList(const EncodableLi
   MessageResponsePigeon decoded(
     std::any_cast<const NotificationPigeon&>(std::get<CustomEncodableValue>(list[0])),
     std::get<std::string>(list[1]));
+  return decoded;
+}
+
+// MessageSystemPigeon
+
+MessageSystemPigeon::MessageSystemPigeon(
+  bool in_app,
+  const MessageResponsePigeon& mrp)
+ : in_app_(in_app),
+    mrp_(std::make_unique<MessageResponsePigeon>(mrp)) {}
+
+MessageSystemPigeon::MessageSystemPigeon(const MessageSystemPigeon& other)
+ : in_app_(other.in_app_),
+    mrp_(std::make_unique<MessageResponsePigeon>(*other.mrp_)) {}
+
+MessageSystemPigeon& MessageSystemPigeon::operator=(const MessageSystemPigeon& other) {
+  in_app_ = other.in_app_;
+  mrp_ = std::make_unique<MessageResponsePigeon>(*other.mrp_);
+  return *this;
+}
+
+bool MessageSystemPigeon::in_app() const {
+  return in_app_;
+}
+
+void MessageSystemPigeon::set_in_app(bool value_arg) {
+  in_app_ = value_arg;
+}
+
+
+const MessageResponsePigeon& MessageSystemPigeon::mrp() const {
+  return *mrp_;
+}
+
+void MessageSystemPigeon::set_mrp(const MessageResponsePigeon& value_arg) {
+  mrp_ = std::make_unique<MessageResponsePigeon>(value_arg);
+}
+
+
+EncodableList MessageSystemPigeon::ToEncodableList() const {
+  EncodableList list;
+  list.reserve(2);
+  list.push_back(EncodableValue(in_app_));
+  list.push_back(CustomEncodableValue(*mrp_));
+  return list;
+}
+
+MessageSystemPigeon MessageSystemPigeon::FromEncodableList(const EncodableList& list) {
+  MessageSystemPigeon decoded(
+    std::get<bool>(list[0]),
+    std::any_cast<const MessageResponsePigeon&>(std::get<CustomEncodableValue>(list[1])));
   return decoded;
 }
 
@@ -801,13 +801,13 @@ EncodableValue PigeonInternalCodecSerializer::ReadValueOfType(
         return CustomEncodableValue(IosSettingsPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 134: {
-        return CustomEncodableValue(MessageSystemPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
-      }
-    case 135: {
         return CustomEncodableValue(NotificationPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
-    case 136: {
+    case 135: {
         return CustomEncodableValue(MessageResponsePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+      }
+    case 136: {
+        return CustomEncodableValue(MessageSystemPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 137: {
         return CustomEncodableValue(RegisterMessagePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
@@ -849,19 +849,19 @@ void PigeonInternalCodecSerializer::WriteValue(
       WriteValue(EncodableValue(std::any_cast<IosSettingsPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
-    if (custom_value->type() == typeid(MessageSystemPigeon)) {
-      stream->WriteByte(134);
-      WriteValue(EncodableValue(std::any_cast<MessageSystemPigeon>(*custom_value).ToEncodableList()), stream);
-      return;
-    }
     if (custom_value->type() == typeid(NotificationPigeon)) {
-      stream->WriteByte(135);
+      stream->WriteByte(134);
       WriteValue(EncodableValue(std::any_cast<NotificationPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(MessageResponsePigeon)) {
-      stream->WriteByte(136);
+      stream->WriteByte(135);
       WriteValue(EncodableValue(std::any_cast<MessageResponsePigeon>(*custom_value).ToEncodableList()), stream);
+      return;
+    }
+    if (custom_value->type() == typeid(MessageSystemPigeon)) {
+      stream->WriteByte(136);
+      WriteValue(EncodableValue(std::any_cast<MessageSystemPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(RegisterMessagePigeon)) {
@@ -876,46 +876,6 @@ void PigeonInternalCodecSerializer::WriteValue(
     }
   }
   flutter::StandardCodecSerializer::WriteValue(value, stream);
-}
-
-// Generated class from Pigeon that represents Flutter messages that can be called from C++.
-LocalPushConnectivityPigeonFlutterApi::LocalPushConnectivityPigeonFlutterApi(flutter::BinaryMessenger* binary_messenger)
- : binary_messenger_(binary_messenger),
-    message_channel_suffix_("") {}
-
-LocalPushConnectivityPigeonFlutterApi::LocalPushConnectivityPigeonFlutterApi(
-  flutter::BinaryMessenger* binary_messenger,
-  const std::string& message_channel_suffix)
- : binary_messenger_(binary_messenger),
-    message_channel_suffix_(message_channel_suffix.length() > 0 ? std::string(".") + message_channel_suffix : "") {}
-
-const flutter::StandardMessageCodec& LocalPushConnectivityPigeonFlutterApi::GetCodec() {
-  return flutter::StandardMessageCodec::GetInstance(&PigeonInternalCodecSerializer::GetInstance());
-}
-
-void LocalPushConnectivityPigeonFlutterApi::OnMessage(
-  const MessageResponsePigeon& message_arg,
-  std::function<void(void)>&& on_success,
-  std::function<void(const FlutterError&)>&& on_error) {
-  const std::string channel_name = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage" + message_channel_suffix_;
-  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
-  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
-    CustomEncodableValue(message_arg),
-  });
-  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
-    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
-    const auto& encodable_return_value = *response;
-    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
-    if (list_return_value) {
-      if (list_return_value->size() > 1) {
-        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
-      } else {
-        on_success();
-      }
-    } else {
-      on_error(CreateConnectionError(channel_name));
-    } 
-  });
 }
 
 /// The codec used by LocalPushConnectivityPigeonHostApi.
@@ -1082,6 +1042,46 @@ EncodableValue LocalPushConnectivityPigeonHostApi::WrapError(const FlutterError&
     EncodableValue(error.code()),
     EncodableValue(error.message()),
     error.details()
+  });
+}
+
+// Generated class from Pigeon that represents Flutter messages that can be called from C++.
+LocalPushConnectivityPigeonFlutterApi::LocalPushConnectivityPigeonFlutterApi(flutter::BinaryMessenger* binary_messenger)
+ : binary_messenger_(binary_messenger),
+    message_channel_suffix_("") {}
+
+LocalPushConnectivityPigeonFlutterApi::LocalPushConnectivityPigeonFlutterApi(
+  flutter::BinaryMessenger* binary_messenger,
+  const std::string& message_channel_suffix)
+ : binary_messenger_(binary_messenger),
+    message_channel_suffix_(message_channel_suffix.length() > 0 ? std::string(".") + message_channel_suffix : "") {}
+
+const flutter::StandardMessageCodec& LocalPushConnectivityPigeonFlutterApi::GetCodec() {
+  return flutter::StandardMessageCodec::GetInstance(&PigeonInternalCodecSerializer::GetInstance());
+}
+
+void LocalPushConnectivityPigeonFlutterApi::OnMessage(
+  const MessageResponsePigeon& mrp_arg,
+  std::function<void(void)>&& on_success,
+  std::function<void(const FlutterError&)>&& on_error) {
+  const std::string channel_name = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage" + message_channel_suffix_;
+  BasicMessageChannel<> channel(binary_messenger_, channel_name, &GetCodec());
+  EncodableValue encoded_api_arguments = EncodableValue(EncodableList{
+    CustomEncodableValue(mrp_arg),
+  });
+  channel.Send(encoded_api_arguments, [channel_name, on_success = std::move(on_success), on_error = std::move(on_error)](const uint8_t* reply, size_t reply_size) {
+    std::unique_ptr<EncodableValue> response = GetCodec().DecodeMessage(reply, reply_size);
+    const auto& encodable_return_value = *response;
+    const auto* list_return_value = std::get_if<EncodableList>(&encodable_return_value);
+    if (list_return_value) {
+      if (list_return_value->size() > 1) {
+        on_error(FlutterError(std::get<std::string>(list_return_value->at(0)), std::get<std::string>(list_return_value->at(1)), list_return_value->at(2)));
+      } else {
+        on_success();
+      }
+    } else {
+      on_error(CreateConnectionError(channel_name));
+    } 
   });
 }
 

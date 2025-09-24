@@ -244,37 +244,6 @@ data class IosSettingsPigeon (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
-data class MessageSystemPigeon (
-  val inApp: Boolean,
-  val message: MessageResponsePigeon
-)
- {
-  companion object {
-    fun fromList(pigeonVar_list: List<Any?>): MessageSystemPigeon {
-      val inApp = pigeonVar_list[0] as Boolean
-      val message = pigeonVar_list[1] as MessageResponsePigeon
-      return MessageSystemPigeon(inApp, message)
-    }
-  }
-  fun toList(): List<Any?> {
-    return listOf(
-      inApp,
-      message,
-    )
-  }
-  override fun equals(other: Any?): Boolean {
-    if (other !is MessageSystemPigeon) {
-      return false
-    }
-    if (this === other) {
-      return true
-    }
-    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
-
-  override fun hashCode(): Int = toList().hashCode()
-}
-
-/** Generated class from Pigeon that represents data sent in messages. */
 data class NotificationPigeon (
   val title: String,
   val body: String
@@ -326,6 +295,37 @@ data class MessageResponsePigeon (
   }
   override fun equals(other: Any?): Boolean {
     if (other !is MessageResponsePigeon) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class MessageSystemPigeon (
+  val inApp: Boolean,
+  val mrp: MessageResponsePigeon
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): MessageSystemPigeon {
+      val inApp = pigeonVar_list[0] as Boolean
+      val mrp = pigeonVar_list[1] as MessageResponsePigeon
+      return MessageSystemPigeon(inApp, mrp)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      inApp,
+      mrp,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is MessageSystemPigeon) {
       return false
     }
     if (this === other) {
@@ -460,17 +460,17 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          MessageSystemPigeon.fromList(it)
+          NotificationPigeon.fromList(it)
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          NotificationPigeon.fromList(it)
+          MessageResponsePigeon.fromList(it)
         }
       }
       136.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          MessageResponsePigeon.fromList(it)
+          MessageSystemPigeon.fromList(it)
         }
       }
       137.toByte() -> {
@@ -508,15 +508,15 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is MessageSystemPigeon -> {
+      is NotificationPigeon -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is NotificationPigeon -> {
+      is MessageResponsePigeon -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is MessageResponsePigeon -> {
+      is MessageSystemPigeon -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
@@ -534,32 +534,6 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 }
 
 
-/** Generated class from Pigeon that represents Flutter messages that can be called from Kotlin. */
-class LocalPushConnectivityPigeonFlutterApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
-  companion object {
-    /** The codec used by LocalPushConnectivityPigeonFlutterApi. */
-    val codec: MessageCodec<Any?> by lazy {
-      MessagesPigeonCodec()
-    }
-  }
-  fun onMessage(messageArg: MessageResponsePigeon, callback: (Result<Unit>) -> Unit)
-{
-    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
-    val channelName = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage$separatedMessageChannelSuffix"
-    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
-    channel.send(listOf(messageArg)) {
-      if (it is List<*>) {
-        if (it.size > 1) {
-          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
-        } else {
-          callback(Result.success(Unit))
-        }
-      } else {
-        callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
-      } 
-    }
-  }
-}
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface LocalPushConnectivityPigeonHostApi {
   fun initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, callback: (Result<Boolean>) -> Unit)
@@ -675,6 +649,32 @@ interface LocalPushConnectivityPigeonHostApi {
           channel.setMessageHandler(null)
         }
       }
+    }
+  }
+}
+/** Generated class from Pigeon that represents Flutter messages that can be called from Kotlin. */
+class LocalPushConnectivityPigeonFlutterApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by LocalPushConnectivityPigeonFlutterApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+  }
+  fun onMessage(mrpArg: MessageResponsePigeon, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(mrpArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
+      } 
     }
   }
 }

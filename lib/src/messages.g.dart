@@ -269,52 +269,6 @@ class IosSettingsPigeon {
 ;
 }
 
-class MessageSystemPigeon {
-  MessageSystemPigeon({
-    required this.inApp,
-    required this.message,
-  });
-
-  bool inApp;
-
-  MessageResponsePigeon message;
-
-  List<Object?> _toList() {
-    return <Object?>[
-      inApp,
-      message,
-    ];
-  }
-
-  Object encode() {
-    return _toList();  }
-
-  static MessageSystemPigeon decode(Object result) {
-    result as List<Object?>;
-    return MessageSystemPigeon(
-      inApp: result[0]! as bool,
-      message: result[1]! as MessageResponsePigeon,
-    );
-  }
-
-  @override
-  // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  bool operator ==(Object other) {
-    if (other is! MessageSystemPigeon || other.runtimeType != runtimeType) {
-      return false;
-    }
-    if (identical(this, other)) {
-      return true;
-    }
-    return _deepEquals(encode(), other.encode());
-  }
-
-  @override
-  // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => Object.hashAll(_toList())
-;
-}
-
 class NotificationPigeon {
   NotificationPigeon({
     required this.title,
@@ -393,6 +347,52 @@ class MessageResponsePigeon {
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
     if (other is! MessageResponsePigeon || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class MessageSystemPigeon {
+  MessageSystemPigeon({
+    required this.inApp,
+    required this.mrp,
+  });
+
+  bool inApp;
+
+  MessageResponsePigeon mrp;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      inApp,
+      mrp,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static MessageSystemPigeon decode(Object result) {
+    result as List<Object?>;
+    return MessageSystemPigeon(
+      inApp: result[0]! as bool,
+      mrp: result[1]! as MessageResponsePigeon,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! MessageSystemPigeon || other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -577,13 +577,13 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is IosSettingsPigeon) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is MessageSystemPigeon) {
+    }    else if (value is NotificationPigeon) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is NotificationPigeon) {
+    }    else if (value is MessageResponsePigeon) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is MessageResponsePigeon) {
+    }    else if (value is MessageSystemPigeon) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
     }    else if (value is RegisterMessagePigeon) {
@@ -612,52 +612,17 @@ class _PigeonCodec extends StandardMessageCodec {
       case 133: 
         return IosSettingsPigeon.decode(readValue(buffer)!);
       case 134: 
-        return MessageSystemPigeon.decode(readValue(buffer)!);
-      case 135: 
         return NotificationPigeon.decode(readValue(buffer)!);
-      case 136: 
+      case 135: 
         return MessageResponsePigeon.decode(readValue(buffer)!);
+      case 136: 
+        return MessageSystemPigeon.decode(readValue(buffer)!);
       case 137: 
         return RegisterMessagePigeon.decode(readValue(buffer)!);
       case 138: 
         return PluginSettingsPigeon.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
-    }
-  }
-}
-
-abstract class LocalPushConnectivityPigeonFlutterApi {
-  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
-
-  Future<void> onMessage(MessageResponsePigeon message);
-
-  static void setUp(LocalPushConnectivityPigeonFlutterApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
-    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
-    {
-      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage$messageChannelSuffix', pigeonChannelCodec,
-          binaryMessenger: binaryMessenger);
-      if (api == null) {
-        pigeonVar_channel.setMessageHandler(null);
-      } else {
-        pigeonVar_channel.setMessageHandler((Object? message) async {
-          assert(message != null,
-          'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null.');
-          final List<Object?> args = (message as List<Object?>?)!;
-          final MessageResponsePigeon? arg_message = (args[0] as MessageResponsePigeon?);
-          assert(arg_message != null,
-              'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null, expected non-null MessageResponsePigeon.');
-          try {
-            await api.onMessage(arg_message!);
-            return wrapResponse(empty: true);
-          } on PlatformException catch (e) {
-            return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
-          }
-        });
-      }
     }
   }
 }
@@ -812,6 +777,41 @@ class LocalPushConnectivityPigeonHostApi {
       );
     } else {
       return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+}
+
+abstract class LocalPushConnectivityPigeonFlutterApi {
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  Future<void> onMessage(MessageResponsePigeon mrp);
+
+  static void setUp(LocalPushConnectivityPigeonFlutterApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final MessageResponsePigeon? arg_mrp = (args[0] as MessageResponsePigeon?);
+          assert(arg_mrp != null,
+              'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null, expected non-null MessageResponsePigeon.');
+          try {
+            await api.onMessage(arg_mrp!);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
     }
   }
 }

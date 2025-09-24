@@ -288,35 +288,6 @@ struct IosSettingsPigeon: Hashable {
 }
 
 /// Generated class from Pigeon that represents data sent in messages.
-struct MessageSystemPigeon: Hashable {
-  var inApp: Bool
-  var message: MessageResponsePigeon
-
-
-  // swift-format-ignore: AlwaysUseLowerCamelCase
-  static func fromList(_ pigeonVar_list: [Any?]) -> MessageSystemPigeon? {
-    let inApp = pigeonVar_list[0] as! Bool
-    let message = pigeonVar_list[1] as! MessageResponsePigeon
-
-    return MessageSystemPigeon(
-      inApp: inApp,
-      message: message
-    )
-  }
-  func toList() -> [Any?] {
-    return [
-      inApp,
-      message,
-    ]
-  }
-  static func == (lhs: MessageSystemPigeon, rhs: MessageSystemPigeon) -> Bool {
-    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
-  func hash(into hasher: inout Hasher) {
-    deepHashMessages(value: toList(), hasher: &hasher)
-  }
-}
-
-/// Generated class from Pigeon that represents data sent in messages.
 struct NotificationPigeon: Hashable {
   var title: String
   var body: String
@@ -368,6 +339,35 @@ struct MessageResponsePigeon: Hashable {
     ]
   }
   static func == (lhs: MessageResponsePigeon, rhs: MessageResponsePigeon) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct MessageSystemPigeon: Hashable {
+  var inApp: Bool
+  var mrp: MessageResponsePigeon
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> MessageSystemPigeon? {
+    let inApp = pigeonVar_list[0] as! Bool
+    let mrp = pigeonVar_list[1] as! MessageResponsePigeon
+
+    return MessageSystemPigeon(
+      inApp: inApp,
+      mrp: mrp
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      inApp,
+      mrp,
+    ]
+  }
+  static func == (lhs: MessageSystemPigeon, rhs: MessageSystemPigeon) -> Bool {
     return deepEqualsMessages(lhs.toList(), rhs.toList())  }
   func hash(into hasher: inout Hasher) {
     deepHashMessages(value: toList(), hasher: &hasher)
@@ -494,11 +494,11 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 133:
       return IosSettingsPigeon.fromList(self.readValue() as! [Any?])
     case 134:
-      return MessageSystemPigeon.fromList(self.readValue() as! [Any?])
-    case 135:
       return NotificationPigeon.fromList(self.readValue() as! [Any?])
-    case 136:
+    case 135:
       return MessageResponsePigeon.fromList(self.readValue() as! [Any?])
+    case 136:
+      return MessageSystemPigeon.fromList(self.readValue() as! [Any?])
     case 137:
       return RegisterMessagePigeon.fromList(self.readValue() as! [Any?])
     case 138:
@@ -526,13 +526,13 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? IosSettingsPigeon {
       super.writeByte(133)
       super.writeValue(value.toList())
-    } else if let value = value as? MessageSystemPigeon {
+    } else if let value = value as? NotificationPigeon {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? NotificationPigeon {
+    } else if let value = value as? MessageResponsePigeon {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? MessageResponsePigeon {
+    } else if let value = value as? MessageSystemPigeon {
       super.writeByte(136)
       super.writeValue(value.toList())
     } else if let value = value as? RegisterMessagePigeon {
@@ -562,39 +562,6 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 }
 
 
-/// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
-protocol LocalPushConnectivityPigeonFlutterApiProtocol {
-  func onMessage(message messageArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void)
-}
-class LocalPushConnectivityPigeonFlutterApi: LocalPushConnectivityPigeonFlutterApiProtocol {
-  private let binaryMessenger: FlutterBinaryMessenger
-  private let messageChannelSuffix: String
-  init(binaryMessenger: FlutterBinaryMessenger, messageChannelSuffix: String = "") {
-    self.binaryMessenger = binaryMessenger
-    self.messageChannelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-  }
-  var codec: MessagesPigeonCodec {
-    return MessagesPigeonCodec.shared
-  }
-  func onMessage(message messageArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void) {
-    let channelName: String = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage\(messageChannelSuffix)"
-    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
-    channel.sendMessage([messageArg] as [Any?]) { response in
-      guard let listResponse = response as? [Any?] else {
-        completion(.failure(createConnectionError(withChannelName: channelName)))
-        return
-      }
-      if listResponse.count > 1 {
-        let code: String = listResponse[0] as! String
-        let message: String? = nilOrValue(listResponse[1])
-        let details: String? = nilOrValue(listResponse[2])
-        completion(.failure(PigeonError(code: code, message: message, details: details)))
-      } else {
-        completion(.success(()))
-      }
-    }
-  }
-}
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol LocalPushConnectivityPigeonHostApi {
   func initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void)
@@ -692,6 +659,39 @@ class LocalPushConnectivityPigeonHostApiSetup {
       }
     } else {
       stopChannel.setMessageHandler(nil)
+    }
+  }
+}
+/// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
+protocol LocalPushConnectivityPigeonFlutterApiProtocol {
+  func onMessage(mrp mrpArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void)
+}
+class LocalPushConnectivityPigeonFlutterApi: LocalPushConnectivityPigeonFlutterApiProtocol {
+  private let binaryMessenger: FlutterBinaryMessenger
+  private let messageChannelSuffix: String
+  init(binaryMessenger: FlutterBinaryMessenger, messageChannelSuffix: String = "") {
+    self.binaryMessenger = binaryMessenger
+    self.messageChannelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+  }
+  var codec: MessagesPigeonCodec {
+    return MessagesPigeonCodec.shared
+  }
+  func onMessage(mrp mrpArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+    let channelName: String = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage\(messageChannelSuffix)"
+    let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+    channel.sendMessage([mrpArg] as [Any?]) { response in
+      guard let listResponse = response as? [Any?] else {
+        completion(.failure(createConnectionError(withChannelName: channelName)))
+        return
+      }
+      if listResponse.count > 1 {
+        let code: String = listResponse[0] as! String
+        let message: String? = nilOrValue(listResponse[1])
+        let details: String? = nilOrValue(listResponse[2])
+        completion(.failure(PigeonError(code: code, message: message, details: details)))
+      } else {
+        completion(.success(()))
+      }
     }
   }
 }
