@@ -21,10 +21,15 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.hodoan.local_push_connectivity.LocalPushConnectivityPlugin
+import com.hodoan.local_push_connectivity.MessageResponsePigeon
+import com.hodoan.local_push_connectivity.MessageSystemPigeon
+import com.hodoan.local_push_connectivity.NotificationPigeon
 import com.hodoan.local_push_connectivity.sockets.ISocket
 import com.hodoan.local_push_connectivity.wrapper.MessageResponse
 import com.hodoan.local_push_connectivity.wrapper.PigeonWrapper
+import com.hodoan.local_push_connectivity.wrapper.PingModel
 import com.hodoan.local_push_connectivity.wrapper.PluginSettings
+import com.hodoan.local_push_connectivity.wrapper.PongModel
 
 interface ReceiverCallback {
     fun newMessage(message: String)
@@ -130,8 +135,8 @@ class PushNotificationService : Service(), ReceiverCallback {
         )
 
         val notification = createNotification(
-            channelId, notificationResponse.notification.title,
-            notificationResponse.notification.body, pendingIntent
+            channelId, notificationResponse.Notification.Title,
+            notificationResponse.Notification.Body, pendingIntent
         )
         with(NotificationManagerCompat.from(this)) {
             if (ActivityCompat
@@ -149,8 +154,8 @@ class PushNotificationService : Service(), ReceiverCallback {
             val summaryNotification = NotificationCompat.Builder(applicationContext, channelId)
                 .setSmallIcon(getIcon())
                 .setColor(Color.GRAY)
-                .setContentTitle(notificationResponse.notification.title)
-                .setContentText(notificationResponse.notification.body)
+                .setContentTitle(notificationResponse.Notification.Title)
+                .setContentText(notificationResponse.Notification.Body)
                 .setGroup(GROUP_KEY)
                 .setGroupSummary(true)
                 .build()
@@ -243,12 +248,44 @@ class PushNotificationService : Service(), ReceiverCallback {
 
     override fun newMessage(message: String) {
         try {
-            if(message == "{\"type\":\"pong\"}") return
+            var pong: PongModel? = null
+            try {
+                pong = PigeonWrapper.fromString(message)
+            } catch (e: Exception) {
+                Log.e(TAG, "newMessage is not pong")
+            }
+            if (pong?.pong != null) {
+                return
+            }
+            if (message == "reconnect") {
+                if (LocalPushConnectivityPlugin.flutterApi != null) {
+                    Handler(Looper.getMainLooper()).post {
+                        LocalPushConnectivityPlugin.flutterApi!!.onMessage(
+                            MessageSystemPigeon(
+                                false, MessageResponsePigeon(
+                                    NotificationPigeon("", ""),
+                                    mPayload = message
+                                )
+                            )
+                        ) {
+                            if (it.isSuccess) {
+                                Log.d(TAG, "newMessage: receive success")
+                            } else {
+                                Log.e(TAG, "newMessage: receive failure")
+                                throw Exception("send failure")
+                            }
+                        }
+                    }
+                } else {
+                    throw Exception("LocalPushConnectivityPlugin.flutterApi is null")
+                }
+                return
+            }
             val notificationResponse = PigeonWrapper.fromString<MessageResponse>(message)
             if (LocalPushConnectivityPlugin.flutterApi != null) {
                 Handler(Looper.getMainLooper()).post {
                     LocalPushConnectivityPlugin.flutterApi!!.onMessage(
-                        notificationResponse.toPigeon(message)
+                        MessageSystemPigeon(false, notificationResponse.toPigeon(message))
                     ) {
                         if (it.isSuccess) {
                             Log.d(TAG, "newMessage: receive success")

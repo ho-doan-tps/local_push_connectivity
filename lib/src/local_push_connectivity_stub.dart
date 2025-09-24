@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:js_interop';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
 import 'package:flutter/services.dart';
@@ -10,6 +11,12 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'messages.g.dart';
 import 'model.dart';
+
+const _timeDebug = 3;
+const _time = 20;
+
+const _durationHeartbeat = Duration(seconds: kDebugMode ? _timeDebug : _time);
+const _durationHeartbeatCheck = kDebugMode ? _timeDebug * 2 : _time * 2;
 
 class LocalPushConnectivity
     implements
@@ -33,8 +40,8 @@ class LocalPushConnectivity
   bool _isFocus = false;
 
   @override
-  Future<void> onMessage(MessageResponsePigeon message) async {
-    _controller.add(MessageSystemPigeon(inApp: true, mrp: message));
+  Future<void> onMessage(MessageSystemPigeon message) async {
+    _controller.add(message);
     return;
   }
 
@@ -62,16 +69,13 @@ class LocalPushConnectivity
   }
 
   @override
-  Future<bool> config(TCPModePigeon mode, [String? ssid]) async {
+  Future<bool> config(TCPModePigeon mode, [List<String>? ssids]) async {
     pluginSettings.host = mode.host;
     pluginSettings.publicKey = mode.publicHasKey;
     pluginSettings.port = mode.port;
     pluginSettings.wsPath = mode.path;
     pluginSettings.wss = mode.connectionType == ConnectionType.wss;
     pluginSettings.useTcp = mode.connectionType == ConnectionType.tcp;
-    pluginSettings.systemType = 77;
-    // TODO: get connector id
-    pluginSettings.connectorID = '4';
     pluginSettings.deviceId = getDeviceID();
     await start();
     return true;
@@ -79,6 +83,7 @@ class LocalPushConnectivity
 
   @override
   Future<bool> initialize({
+    required int systemType,
     AndroidSettingsPigeon? android,
     WindowsSettingsPigeon? windows,
     IosSettingsPigeon? ios,
@@ -90,9 +95,7 @@ class LocalPushConnectivity
     pluginSettings.wsPath = mode.path;
     pluginSettings.wss = mode.connectionType == ConnectionType.wss;
     pluginSettings.useTcp = mode.connectionType == ConnectionType.tcp;
-    pluginSettings.systemType = 77;
-    // TODO: get connector id
-    pluginSettings.connectorID = '4';
+    pluginSettings.systemType = systemType;
     pluginSettings.deviceId = getDeviceID();
     return true;
   }
@@ -118,68 +121,154 @@ class LocalPushConnectivity
   }
 
   WebSocketChannel? _webSocketChannel;
+  StreamSubscription<dynamic>? _webSocketChannelSubscription;
+
+  Timer? _heartbeatTimer;
+  DateTime? _lastHeartbeatTime;
+
+  void _closeHeartbeatTimer() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+
+  void _startHeartbeatTimer() {
+    _closeHeartbeatTimer();
+    _heartbeatTimer = Timer.periodic(_durationHeartbeat, (timer) {
+      _webSocketChannel?.sink.add(jsonEncode(PingMessage()));
+      final now = DateTime.now();
+      if (now.difference(_lastHeartbeatTime ?? DateTime.now()).inSeconds >
+          _durationHeartbeatCheck) {
+        log('Heartbeat timed out');
+        _reconnect();
+      }
+    });
+  }
 
   @override
   Future<bool> start() async {
     await stop();
-    log('Starting WebSocket connection');
-    _webSocketChannel = WebSocketChannel.connect(
-      Uri.parse(
-        'ws://${pluginSettings.host}:${pluginSettings.port}${pluginSettings.wsPath}',
-      ),
-    );
-    await _webSocketChannel?.ready;
-    _webSocketChannel?.sink.add(
-      jsonEncode(
-        RegisterMessage(
-          messageType: 'register',
-          sendConnectorID: pluginSettings.connectorID ?? '',
-          systemType: pluginSettings.systemType ?? 0,
-          sendDeviceId: pluginSettings.deviceId ?? '',
-        ).toJson(),
-      ),
-    );
-    _webSocketChannel?.stream.listen(
-      (event) {
-        final message = MessageResponse.fromString(event.toString());
-        if (!_isFocus) {
-          _sendNotification(
-            MessageResponse(
-              notification: message.notification,
-              mPayload: event.toString(),
+    _closeConnection = false;
+    if (pluginSettings.connectorID == null) {
+      return false;
+    }
+    try {
+      log('Starting WebSocket connection');
+      _webSocketChannel = WebSocketChannel.connect(
+        Uri.parse(
+          'ws://${pluginSettings.host}:${pluginSettings.port}${pluginSettings.wsPath}',
+        ),
+      );
+      await _webSocketChannel?.ready;
+      _webSocketChannel?.sink.add(
+        jsonEncode(
+          RegisterMessage(
+            messageType: 'register',
+            systemType: pluginSettings.systemType ?? 0,
+            sender: Sender(
+              connectorID: pluginSettings.connectorID ?? '',
+              connectorTag: pluginSettings.connectorTag ?? '',
+              deviceID: pluginSettings.deviceId ?? '',
             ),
-            onNotificationClick: (value) {
-              _controller.add(
-                MessageSystemPigeon(
-                  inApp: true,
-                  mrp: MessageResponsePigeon(
-                    notification: NotificationPigeon(
-                      title: message.notification.title,
-                      body: message.notification.body,
+            data: Data(),
+          ).toJson(),
+        ),
+      );
+      _startHeartbeatTimer();
+      onMessage(
+        MessageSystemPigeon(
+          fromNotification: false,
+          mrp: MessageResponsePigeon(
+            notification: NotificationPigeon(
+              title: 'Reconnect',
+              body: 'Reconnect',
+            ),
+            mPayload: 'reconnect',
+          ),
+        ),
+      );
+
+      _webSocketChannelSubscription = _webSocketChannel?.stream.listen(
+        (event) {
+          PongMessage? pong;
+          try {
+            final pong_ = PongMessage.fromJson(jsonDecode(event.toString()));
+            // final ping_ = PingMessage.fromJson(jsonDecode(event.toString()));
+            // if (ping_.messageType == 'ping') return;
+
+            if (pong_.pong != null) {
+              pong = pong_;
+              _lastHeartbeatTime = DateTime.now();
+            }
+          } catch (e) {
+            log('WebSocket connection error: $e');
+          }
+          if (pong != null) {
+            _lastHeartbeatTime = DateTime.now();
+            return;
+          }
+          final message = MessageResponse.fromString(event.toString());
+          if (!_isFocus) {
+            _sendNotification(
+              MessageResponse(
+                notification: message.notification,
+                mPayload: event.toString(),
+              ),
+              onNotificationClick: (value) {
+                _controller.add(
+                  MessageSystemPigeon(
+                    fromNotification: true,
+                    mrp: MessageResponsePigeon(
+                      notification: NotificationPigeon(
+                        title: message.notification.title,
+                        body: message.notification.body,
+                      ),
+                      mPayload: value,
                     ),
-                    mPayload: value,
                   ),
+                );
+              },
+            );
+          } else {
+            _controller.add(
+              MessageSystemPigeon(
+                fromNotification: false,
+                mrp: MessageResponsePigeon(
+                  notification: NotificationPigeon(
+                    title: message.notification.title,
+                    body: message.notification.body,
+                  ),
+                  mPayload: event.toString(),
                 ),
-              );
-            },
-          );
-        }
-      },
-      onDone: () {
-        log('WebSocket connection closed');
-        if (!_closeConnection) {
-          start();
-        }
-      },
-      onError: (error) {
-        log('WebSocket connection error: $error');
-        if (!_closeConnection) {
-          start();
-        }
-      },
-      cancelOnError: true,
-    );
-    return true;
+              ),
+            );
+          }
+        },
+        onDone: () {
+          log('WebSocket connection closed');
+          if (!_closeConnection) {
+            _reconnect();
+          }
+        },
+        onError: (error) {
+          log('WebSocket connection error: $error');
+          if (!_closeConnection) {
+            _reconnect();
+          }
+        },
+        cancelOnError: true,
+      );
+      return true;
+    } catch (e) {
+      log('WebSocket connection error: $e');
+      _reconnect();
+      return false;
+    }
+  }
+
+  void _reconnect() {
+    Future.delayed(Duration(seconds: 5), () {
+      start();
+    });
   }
 
   bool _closeConnection = false;
@@ -188,6 +277,9 @@ class LocalPushConnectivity
   Future<bool> stop() async {
     _closeConnection = true;
     _webSocketChannel?.sink.close();
+    _webSocketChannelSubscription?.cancel();
+    _webSocketChannelSubscription = null;
+    _closeHeartbeatTimer();
     _webSocketChannel = null;
     return true;
   }
@@ -255,6 +347,20 @@ class LocalPushConnectivity
       setCookie("deviceId", deviceId, 365); // Cookie expires in 365 days
     }
     return deviceId;
+  }
+
+  @override
+  Future<bool> registerUser(UserPigeon user) async {
+    pluginSettings.connectorID = user.connectorID;
+    pluginSettings.connectorTag = user.connectorTag;
+
+    await start();
+    return true;
+  }
+
+  @override
+  Future<String> deviceID() async {
+    return getDeviceID();
   }
 
   //#endregion

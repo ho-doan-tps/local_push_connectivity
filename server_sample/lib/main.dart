@@ -208,21 +208,23 @@ class _MyHomePageState extends State<MyHomePage> {
             if (message is String) {
               try {
                 final json = jsonDecode(message);
-                if (json['type'] == 'ping') {
-                  websocket.add(jsonEncode({'type': 'pong'}));
+                if (json['messageType'] == 'ping') {
+                  websocket.add(jsonEncode(
+                      {'pong': '${DateTime.now().millisecondsSinceEpoch}'}));
                 } else {
                   final mess = MessageRegister.fromJson(json);
                   if (mounted) {
-                    final socs = clients[mess.sendId];
+                    final socs = clients[mess.sender.connectorID];
                     setState(() {
                       clients = Map.from(clients)
                         ..addAll({
-                          mess.sendId: Map<String, WebSocket>.from(socs ?? {})
-                            ..addAll(
-                              {
-                                mess.deviceId: websocket,
-                              },
-                            )
+                          mess.sender.connectorID:
+                              Map<String, WebSocket>.from(socs ?? {})
+                                ..addAll(
+                                  {
+                                    mess.sender.deviceID: websocket,
+                                  },
+                                )
                         });
                     });
                   }
@@ -236,16 +238,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   jsonDecode(utf8.decode(message)),
                 );
                 if (mounted) {
-                  final socs = clients[mess.sendId];
+                  final socs = clients[mess.sender.connectorID];
                   setState(() {
                     clients = Map.from(clients)
                       ..addAll({
-                        mess.sendId: Map<String, WebSocket>.from(socs ?? {})
-                          ..addAll(
-                            {
-                              mess.deviceId: websocket,
-                            },
-                          )
+                        mess.sender.connectorID:
+                            Map<String, WebSocket>.from(socs ?? {})
+                              ..addAll(
+                                {
+                                  mess.sender.deviceID: websocket,
+                                },
+                              )
                       });
                   });
                 }
@@ -310,16 +313,17 @@ class _MyHomePageState extends State<MyHomePage> {
             final json = jsonDecode(message);
             final mess = MessageRegister.fromJson(json);
             if (mounted) {
-              final socs = clientsTCP[mess.sendId];
+              final socs = clientsTCP[mess.sender.connectorID];
               setState(() {
                 clientsTCP = Map.from(clientsTCP)
                   ..addAll({
-                    mess.sendId: Map<String, Socket>.from(socs ?? {})
-                      ..addAll(
-                        {
-                          mess.deviceId: socket,
-                        },
-                      )
+                    mess.sender.connectorID:
+                        Map<String, Socket>.from(socs ?? {})
+                          ..addAll(
+                            {
+                              mess.sender.deviceID: socket,
+                            },
+                          )
                   });
               });
             }
@@ -414,16 +418,17 @@ class _MyHomePageState extends State<MyHomePage> {
             final json = jsonDecode(message);
             final mess = MessageRegister.fromJson(json);
             if (mounted) {
-              final socs = clientsTCPSecure[mess.sendId];
+              final socs = clientsTCPSecure[mess.sender.connectorID];
               setState(() {
                 clientsTCPSecure = Map.from(clientsTCPSecure)
                   ..addAll({
-                    mess.sendId: Map<String, SecureSocket>.from(socs ?? {})
-                      ..addAll(
-                        {
-                          mess.deviceId: client,
-                        },
-                      )
+                    mess.sender.connectorID:
+                        Map<String, SecureSocket>.from(socs ?? {})
+                          ..addAll(
+                            {
+                              mess.sender.deviceID: client,
+                            },
+                          )
                   });
               });
             }
@@ -488,17 +493,47 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class MessageRegister {
-  final String messageType, sendId, deviceId;
+  final String messageType;
+  final int systemType;
+  final Sender sender;
+  final Data data;
 
   const MessageRegister({
     required this.messageType,
-    required this.sendId,
-    required this.deviceId,
+    required this.systemType,
+    required this.sender,
+    required this.data,
   });
   factory MessageRegister.fromJson(Map<String, dynamic> json) =>
       MessageRegister(
-        messageType: json['MessageType'],
-        sendId: json['SendConnectorID'],
-        deviceId: json['SendDeviceId'],
+        messageType: json['messageType'],
+        systemType: json['systemType'],
+        sender: Sender.fromJson(json['sender']),
+        data: Data.fromJson(json['data']),
       );
+}
+
+class Sender {
+  final String connectorID, connectorTag, deviceID;
+
+  const Sender(
+      {required this.connectorID,
+      required this.connectorTag,
+      required this.deviceID});
+  factory Sender.fromJson(Map<String, dynamic> json) => Sender(
+      connectorID: json['connectorID'],
+      connectorTag: json['connectorTag'],
+      deviceID: json['deviceID']);
+  Map<String, dynamic> toJson() => {
+        'connectorID': connectorID,
+        'connectorTag': connectorTag,
+        'deviceID': deviceID
+      };
+}
+
+class Data {
+  final String? id;
+  const Data({this.id});
+  factory Data.fromJson(Map<String, dynamic> json) => Data(id: json['id']);
+  Map<String, dynamic> toJson() => {'id': id};
 }

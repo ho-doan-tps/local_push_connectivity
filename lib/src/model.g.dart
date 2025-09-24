@@ -28,16 +28,52 @@ Map<String, dynamic> _$MessageResponseToJson(MessageResponse instance) =>
 
 RegisterMessage _$RegisterMessageFromJson(Map<String, dynamic> json) =>
     RegisterMessage(
-      messageType: json['MessageType'] as String,
-      sendConnectorID: json['SendConnectorID'] as String,
-      sendDeviceId: json['SendDeviceId'] as String,
-      systemType: (json['SystemType'] as num).toInt(),
+      messageType: json['messageType'] as String,
+      sender: Sender.fromJson(json['sender'] as Map<String, dynamic>),
+      data: Data.fromJson(json['data'] as Map<String, dynamic>),
+      systemType: (json['systemType'] as num).toInt(),
     );
 
 Map<String, dynamic> _$RegisterMessageToJson(RegisterMessage instance) =>
     <String, dynamic>{
-      'MessageType': instance.messageType,
-      'SendConnectorID': instance.sendConnectorID,
-      'SendDeviceId': instance.sendDeviceId,
-      'SystemType': instance.systemType,
+      'messageType': instance.messageType,
+      'systemType': instance.systemType,
+      'sender': instance.sender.toJson(),
+      'data': instance.data.toJson(),
     };
+
+Sender _$SenderFromJson(Map<String, dynamic> json) => Sender(
+  connectorID: json['connectorID'] as String,
+  connectorTag: json['connectorTag'] as String,
+  deviceID: json['deviceID'] as String,
+);
+
+Map<String, dynamic> _$SenderToJson(Sender instance) => <String, dynamic>{
+  'connectorID': instance.connectorID,
+  'connectorTag': instance.connectorTag,
+  'deviceID': instance.deviceID,
+};
+
+Data _$DataFromJson(Map<String, dynamic> json) => Data(
+  apnsToken: json['apnsToken'] as String?,
+  applicationID: json['applicationID'] as String?,
+  apnsServerType: (json['apnsServerType'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$DataToJson(Data instance) => <String, dynamic>{
+  'apnsToken': instance.apnsToken,
+  'applicationID': instance.applicationID,
+  'apnsServerType': instance.apnsServerType,
+};
+
+PingMessage _$PingMessageFromJson(Map<String, dynamic> json) =>
+    PingMessage(messageType: json['messageType'] as String? ?? 'ping');
+
+Map<String, dynamic> _$PingMessageToJson(PingMessage instance) =>
+    <String, dynamic>{'messageType': instance.messageType};
+
+PongMessage _$PongMessageFromJson(Map<String, dynamic> json) =>
+    PongMessage(pong: json['pong'] as String?);
+
+Map<String, dynamic> _$PongMessageToJson(PongMessage instance) =>
+    <String, dynamic>{'pong': instance.pong};

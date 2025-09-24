@@ -30,7 +30,13 @@ public class WebSocketClient: ISocket {
         
         self.heartbeat()
         
-        let register = RegisterModel(messageType: "register", sendConnectorID: "4", sendDeviceId: settings.deviceId ?? "", systemType: 1)
+        dispatchQueue.async {
+            self.requestNotification(payload: "reconnect")
+        }
+        
+        let register = RegisterModel(messageType: "register", 
+            sender: Sender(connectorID: settings.connectorID ?? "", connectorTag: settings.connectorTag ?? "", deviceID: settings.deviceId ?? ""), 
+            data: DataRegister(apnsToken: nil, applicationID: nil, apnsServerType: nil), systemType: settings.systemType ?? -1)
         guard let encoded = try? JSONEncoder().encode(register) else {
             self.disconnect()
             return
@@ -119,7 +125,7 @@ public class WebSocketClient: ISocket {
                 switch message {
                 case .data(let data):
                     self.receiveData()
-                    DispatchQueue.main.async {
+                    dispatchQueue.async {
                         let str = String(data: data, encoding: .utf8)
                         self.requestNotification(payload: str ?? "")
                     }

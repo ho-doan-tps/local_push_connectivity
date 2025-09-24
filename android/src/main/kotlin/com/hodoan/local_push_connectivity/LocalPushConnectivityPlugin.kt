@@ -11,8 +11,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.hodoan.local_push_connectivity.services.PushNotificationService
@@ -50,6 +49,7 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
     }
 
     override fun initialize(
+        systemType: Long,
         android: AndroidSettingsPigeon?,
         windows: WindowsSettingsPigeon?,
         ios: IosSettingsPigeon?,
@@ -72,16 +72,14 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
             wsPath = mode.path,
             wss = mode.connectionType == ConnectionType.WSS,
             useTcp = mode.connectionType == ConnectionType.TCP,
-            // TODO:
-            systemType = 1,
-            connectorID = "4"
+            systemType = systemType
         )
         start(callback)
     }
 
     override fun config(
         mode: TCPModePigeon,
-        ssid: String?,
+        ssids: List<String>?,
         callback: (Result<Boolean>) -> Unit
     ) {
         val newSettings = PluginSettings(
@@ -91,12 +89,30 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
             wsPath = mode.path,
             wss = mode.connectionType == ConnectionType.WSS,
             useTcp = mode.connectionType == ConnectionType.TCP,
-            // TODO:
-            systemType = 1,
-            connectorID = "4"
         )
         settings = settings.copyWith(newSettings)
         start(callback)
+    }
+
+    override fun registerUser(user: UserPigeon, callback: (Result<Boolean>) -> Unit) {
+        val newSettings = PluginSettings(
+            connectorID = user.connectorID,
+            connectorTag = user.connectorTag
+        )
+        settings = settings.copyWith(newSettings)
+        start(callback)
+    }
+
+    @SuppressLint("HardwareIds")
+    override fun deviceID(callback: (Result<String>) -> Unit) {
+        activity?.let {
+            val deviceId = Settings.Secure.getString(
+                it.contentResolver, Settings.Secure.ANDROID_ID
+            )
+            callback(Result.success(deviceId))
+            return
+        }
+        callback(Result.success(""))
     }
 
     override fun requestPermission(callback: (Result<Boolean>) -> Unit) {
@@ -236,7 +252,7 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
                 NotificationPigeon("a", "a"), it
             )
             flutterApi?.onMessage(
-                m
+                MessageSystemPigeon(true,m)
             ) { result ->
                 Log.d(TAG, "onNewIntent: ${result.isSuccess}")
             }

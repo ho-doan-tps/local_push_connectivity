@@ -3,6 +3,7 @@ struct Settings: Codable, Equatable {
     var host: String? = nil
     var deviceId: String? = nil
     var connectorID: String? = nil
+    var connectorTag: String? = nil
     var systemType: Int? = nil
     var port: Int? = nil
     var wss: Bool? = nil
@@ -23,6 +24,7 @@ struct Settings: Codable, Equatable {
         setting.wsPath = settings.wsPath
         setting.useTcp = settings.useTcp ?? false
         setting.publicKey = settings.publicKey
+        setting.connectorTag = settings.connectorTag
         return setting
     }
     
@@ -41,6 +43,7 @@ struct Settings: Codable, Equatable {
         setting.wsPath = settings.wsPath ?? self.wsPath
         setting.useTcp = settings.useTcp ?? self.useTcp
         setting.publicKey = settings.publicKey ?? self.publicKey
+        setting.connectorTag = settings.connectorTag ?? self.connectorTag
         return setting
     }
 }

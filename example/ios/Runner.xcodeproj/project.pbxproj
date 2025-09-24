@@ -911,7 +911,7 @@
 			repositoryURL = "https://github.com/ho-doan-tps/local_push_connectivity_core.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.4;
+				minimumVersion = 1.0.7;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

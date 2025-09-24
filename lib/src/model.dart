@@ -35,26 +35,68 @@ class MessageResponse {
   Map<String, dynamic> toJson() => _$MessageResponseToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class RegisterMessage {
   RegisterMessage({
     required this.messageType,
-    required this.sendConnectorID,
-    required this.sendDeviceId,
+    required this.sender,
+    required this.data,
     required this.systemType,
   });
 
-  @JsonKey(name: 'MessageType')
   final String messageType;
-
-  @JsonKey(name: 'SendConnectorID')
-  final String sendConnectorID;
-  @JsonKey(name: 'SendDeviceId')
-  final String sendDeviceId;
-  @JsonKey(name: 'SystemType')
   final int systemType;
+  final Sender sender;
+  final Data data;
 
   factory RegisterMessage.fromJson(Map<String, dynamic> json) =>
       _$RegisterMessageFromJson(json);
   Map<String, dynamic> toJson() => _$RegisterMessageToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class Sender {
+  Sender({
+    required this.connectorID,
+    required this.connectorTag,
+    required this.deviceID,
+  });
+
+  final String connectorID;
+  final String connectorTag;
+  final String deviceID;
+
+  factory Sender.fromJson(Map<String, dynamic> json) => _$SenderFromJson(json);
+  Map<String, dynamic> toJson() => _$SenderToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class Data {
+  const Data({this.apnsToken, this.applicationID, this.apnsServerType});
+  final String? apnsToken;
+  final String? applicationID;
+  final int? apnsServerType;
+
+  factory Data.fromJson(Map<String, dynamic> json) => _$DataFromJson(json);
+  Map<String, dynamic> toJson() => _$DataToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PingMessage {
+  const PingMessage({this.messageType = 'ping'});
+  final String messageType;
+
+  factory PingMessage.fromJson(Map<String, dynamic> json) =>
+      _$PingMessageFromJson(json);
+  Map<String, dynamic> toJson() => _$PingMessageToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PongMessage {
+  const PongMessage({this.pong});
+  final String? pong;
+
+  factory PongMessage.fromJson(Map<String, dynamic> json) =>
+      _$PongMessageFromJson(json);
+  Map<String, dynamic> toJson() => _$PongMessageToJson(this);
 }

@@ -193,19 +193,14 @@ class WindowsSettingsPigeon {
 class IosSettingsPigeon {
  public:
   // Constructs an object setting all non-nullable fields.
-  explicit IosSettingsPigeon(bool enable_s_s_i_d);
+  IosSettingsPigeon();
 
   // Constructs an object setting all fields.
-  explicit IosSettingsPigeon(
-    const std::string* ssid,
-    bool enable_s_s_i_d);
+  explicit IosSettingsPigeon(const flutter::EncodableList* ssids);
 
-  const std::string* ssid() const;
-  void set_ssid(const std::string_view* value_arg);
-  void set_ssid(std::string_view value_arg);
-
-  bool enable_s_s_i_d() const;
-  void set_enable_s_s_i_d(bool value_arg);
+  const flutter::EncodableList* ssids() const;
+  void set_ssids(const flutter::EncodableList* value_arg);
+  void set_ssids(const flutter::EncodableList& value_arg);
 
  private:
   static IosSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
@@ -213,8 +208,32 @@ class IosSettingsPigeon {
   friend class LocalPushConnectivityPigeonHostApi;
   friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
-  std::optional<std::string> ssid_;
-  bool enable_s_s_i_d_;
+  std::optional<flutter::EncodableList> ssids_;
+};
+
+
+// Generated class from Pigeon that represents data sent in messages.
+class UserPigeon {
+ public:
+  // Constructs an object setting all fields.
+  explicit UserPigeon(
+    const std::string& connector_i_d,
+    const std::string& connector_tag);
+
+  const std::string& connector_i_d() const;
+  void set_connector_i_d(std::string_view value_arg);
+
+  const std::string& connector_tag() const;
+  void set_connector_tag(std::string_view value_arg);
+
+ private:
+  static UserPigeon FromEncodableList(const flutter::EncodableList& list);
+  flutter::EncodableList ToEncodableList() const;
+  friend class LocalPushConnectivityPigeonHostApi;
+  friend class LocalPushConnectivityPigeonFlutterApi;
+  friend class PigeonInternalCodecSerializer;
+  std::string connector_i_d_;
+  std::string connector_tag_;
 };
 
 
@@ -280,7 +299,7 @@ class MessageSystemPigeon {
  public:
   // Constructs an object setting all fields.
   explicit MessageSystemPigeon(
-    bool in_app,
+    bool from_notification,
     const MessageResponsePigeon& mrp);
 
   ~MessageSystemPigeon() = default;
@@ -288,8 +307,8 @@ class MessageSystemPigeon {
   MessageSystemPigeon& operator=(const MessageSystemPigeon& other);
   MessageSystemPigeon(MessageSystemPigeon&& other) = default;
   MessageSystemPigeon& operator=(MessageSystemPigeon&& other) noexcept = default;
-  bool in_app() const;
-  void set_in_app(bool value_arg);
+  bool from_notification() const;
+  void set_from_notification(bool value_arg);
 
   const MessageResponsePigeon& mrp() const;
   void set_mrp(const MessageResponsePigeon& value_arg);
@@ -300,7 +319,7 @@ class MessageSystemPigeon {
   friend class LocalPushConnectivityPigeonHostApi;
   friend class LocalPushConnectivityPigeonFlutterApi;
   friend class PigeonInternalCodecSerializer;
-  bool in_app_;
+  bool from_notification_;
   std::unique_ptr<MessageResponsePigeon> mrp_;
 };
 
@@ -358,7 +377,8 @@ class PluginSettingsPigeon {
     const bool* wss,
     const std::string* ws_path,
     const bool* use_tcp,
-    const std::string* public_key);
+    const std::string* public_key,
+    const std::string* connector_tag);
 
   const std::string* host() const;
   void set_host(const std::string_view* value_arg);
@@ -404,6 +424,10 @@ class PluginSettingsPigeon {
   void set_public_key(const std::string_view* value_arg);
   void set_public_key(std::string_view value_arg);
 
+  const std::string* connector_tag() const;
+  void set_connector_tag(const std::string_view* value_arg);
+  void set_connector_tag(std::string_view value_arg);
+
  private:
   static PluginSettingsPigeon FromEncodableList(const flutter::EncodableList& list);
   flutter::EncodableList ToEncodableList() const;
@@ -421,6 +445,7 @@ class PluginSettingsPigeon {
   std::optional<std::string> ws_path_;
   std::optional<bool> use_tcp_;
   std::optional<std::string> public_key_;
+  std::optional<std::string> connector_tag_;
 };
 
 
@@ -448,6 +473,7 @@ class LocalPushConnectivityPigeonHostApi {
   LocalPushConnectivityPigeonHostApi& operator=(const LocalPushConnectivityPigeonHostApi&) = delete;
   virtual ~LocalPushConnectivityPigeonHostApi() {}
   virtual void Initialize(
+    int64_t system_type,
     const AndroidSettingsPigeon* android,
     const WindowsSettingsPigeon* windows,
     const IosSettingsPigeon* ios,
@@ -455,8 +481,12 @@ class LocalPushConnectivityPigeonHostApi {
     std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void Config(
     const TCPModePigeon& mode,
-    const std::string* ssid,
+    const flutter::EncodableList* ssids,
     std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void RegisterUser(
+    const UserPigeon& user,
+    std::function<void(ErrorOr<bool> reply)> result) = 0;
+  virtual void DeviceID(std::function<void(ErrorOr<std::string> reply)> result) = 0;
   virtual void RequestPermission(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void Start(std::function<void(ErrorOr<bool> reply)> result) = 0;
   virtual void Stop(std::function<void(ErrorOr<bool> reply)> result) = 0;
@@ -485,7 +515,7 @@ class LocalPushConnectivityPigeonFlutterApi {
     const std::string& message_channel_suffix);
   static const flutter::StandardMessageCodec& GetCodec();
   void OnMessage(
-    const MessageResponsePigeon& mrp,
+    const MessageSystemPigeon& mrp,
     std::function<void(void)>&& on_success,
     std::function<void(const FlutterError&)>&& on_error);
  private:

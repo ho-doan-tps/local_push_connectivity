@@ -70,16 +70,23 @@ class WindowsSettingsPigeon {
 }
 
 class IosSettingsPigeon {
-  String? ssid;
-  bool enableSSID;
+  List<String>? ssids;
 
-  IosSettingsPigeon({this.ssid, this.enableSSID = true});
+  IosSettingsPigeon({this.ssids});
+}
+
+class UserPigeon {
+  String connectorID;
+  String connectorTag;
+
+  UserPigeon({required this.connectorID, required this.connectorTag});
 }
 
 @HostApi()
 abstract class LocalPushConnectivityPigeonHostApi {
   @async
   bool initialize({
+    required int systemType,
     AndroidSettingsPigeon? android,
     WindowsSettingsPigeon? windows,
     // WebSettingsPigeon? web,
@@ -87,7 +94,11 @@ abstract class LocalPushConnectivityPigeonHostApi {
     required TCPModePigeon mode,
   });
   @async
-  bool config(TCPModePigeon mode, [String? ssid]);
+  bool config(TCPModePigeon mode, [List<String>? ssids]);
+  @async
+  bool registerUser(UserPigeon user);
+  @async
+  String deviceID();
   @async
   bool requestPermission();
   @async
@@ -111,10 +122,10 @@ class MessageResponsePigeon {
 }
 
 class MessageSystemPigeon {
-  bool inApp;
+  bool fromNotification;
   MessageResponsePigeon mrp;
 
-  MessageSystemPigeon({required this.inApp, required this.mrp});
+  MessageSystemPigeon({required this.fromNotification, required this.mrp});
 }
 
 class RegisterMessagePigeon {
@@ -145,6 +156,7 @@ class PluginSettingsPigeon {
   String? wsPath;
   bool? useTcp;
   String? publicKey;
+  String? connectorTag;
 
   PluginSettingsPigeon({
     required this.host,
@@ -164,5 +176,5 @@ class PluginSettingsPigeon {
 @FlutterApi()
 abstract class LocalPushConnectivityPigeonFlutterApi {
   @async
-  void onMessage(MessageResponsePigeon mrp);
+  void onMessage(MessageSystemPigeon mrp);
 }

@@ -3,8 +3,11 @@ package com.hodoan.local_push_connectivity.sockets
 import android.content.ContentResolver
 import android.util.Log
 import com.hodoan.local_push_connectivity.services.ReceiverCallback
+import com.hodoan.local_push_connectivity.wrapper.PigeonWrapper
+import com.hodoan.local_push_connectivity.wrapper.PingModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.websocket.Frame
@@ -16,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class WebSocketClient(
     contentResolver: ContentResolver,
@@ -23,42 +27,61 @@ class WebSocketClient(
 ) : ISocket(contentResolver, receiverCallback) {
     private val client = HttpClient(CIO) {
         install(WebSockets) {
-            pingInterval = 20_000
+            pingInterval = 3_000
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5_000
+            connectTimeoutMillis = 5_000
         }
     }
 
-    private suspend fun WebSocketSession.heartbeat() {
-        while (isConnected) {
-            try {
-                send(Frame.Text("""{"type":"ping"}"""))
-            } catch (e: Exception) {
-                println("Heartbeat failed: ${e.message}")
-                disconnect(false)
-                connect()
-                break
+    private fun WebSocketSession.heartbeat() {
+        scope?.launch {
+            while (true) {
+                try {
+                    val ping = PingModel("ping")
+                    Log.e(TAG, "heartbeat: send ping ${PigeonWrapper.toString(ping)}")
+                    withTimeout(5_000) {
+                        send(Frame.Text(PigeonWrapper.toString(ping)))
+                    }
+                } catch (e: Exception) {
+                    isConnected = false
+                    println("Heartbeat failed: ${e.message}")
+                    release()
+                    connect()
+                    break
+                }
+                delay(3_000)
             }
-            delay(5000)
         }
     }
 
-    private var scope:CoroutineScope? = CoroutineScope(Job() + Dispatchers.Default)
+    private var scope: CoroutineScope? = CoroutineScope(Job() + Dispatchers.Default)
 
     private suspend fun mConnect() {
         val url =
             "${if (settings.wss == true) "wss" else "ws"}://${settings.host}:${settings.port}${settings.wsPath}"
 
         Log.d(TAG, "mConnect: $url")
-
-        client.webSocket(url) {
-            isConnected = true
-            launch { heartbeat() }
-            send(Frame.Text(messageRegister()))
-            for (message in incoming) {
-                when (message) {
-                    is Frame.Text -> receiverCallback.newMessage(message.readText())
-                    else -> TODO()
+        try {
+            client.webSocket(url) {
+                isConnected = true
+                receiverCallback.newMessage("reconnect")
+                launch { heartbeat() }
+                send(Frame.Text(messageRegister()))
+                for (message in incoming) {
+                    when (message) {
+                        is Frame.Text -> receiverCallback.newMessage(message.readText())
+                        else -> TODO()
+                    }
                 }
             }
+            client.launch {
+
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "mConnect: $e")
+            throw e
         }
     }
 
@@ -91,7 +114,7 @@ class WebSocketClient(
     @Synchronized
     override fun disconnect(isRemoveSetting: Boolean) {
         isConnected = false
-        if(isRemoveSetting) {
+        if (isRemoveSetting) {
             settings.connectorID = null
         }
         thread?.interrupt()

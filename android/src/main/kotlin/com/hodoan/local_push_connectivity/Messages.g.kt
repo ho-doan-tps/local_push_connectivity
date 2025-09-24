@@ -214,25 +214,53 @@ data class WindowsSettingsPigeon (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class IosSettingsPigeon (
-  val ssid: String? = null,
-  val enableSSID: Boolean
+  val ssids: List<String>? = null
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): IosSettingsPigeon {
-      val ssid = pigeonVar_list[0] as String?
-      val enableSSID = pigeonVar_list[1] as Boolean
-      return IosSettingsPigeon(ssid, enableSSID)
+      val ssids = pigeonVar_list[0] as List<String>?
+      return IosSettingsPigeon(ssids)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
-      ssid,
-      enableSSID,
+      ssids,
     )
   }
   override fun equals(other: Any?): Boolean {
     if (other !is IosSettingsPigeon) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return MessagesPigeonUtils.deepEquals(toList(), other.toList())  }
+
+  override fun hashCode(): Int = toList().hashCode()
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class UserPigeon (
+  val connectorID: String,
+  val connectorTag: String
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): UserPigeon {
+      val connectorID = pigeonVar_list[0] as String
+      val connectorTag = pigeonVar_list[1] as String
+      return UserPigeon(connectorID, connectorTag)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      connectorID,
+      connectorTag,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other !is UserPigeon) {
       return false
     }
     if (this === other) {
@@ -307,20 +335,20 @@ data class MessageResponsePigeon (
 
 /** Generated class from Pigeon that represents data sent in messages. */
 data class MessageSystemPigeon (
-  val inApp: Boolean,
+  val fromNotification: Boolean,
   val mrp: MessageResponsePigeon
 )
  {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): MessageSystemPigeon {
-      val inApp = pigeonVar_list[0] as Boolean
+      val fromNotification = pigeonVar_list[0] as Boolean
       val mrp = pigeonVar_list[1] as MessageResponsePigeon
-      return MessageSystemPigeon(inApp, mrp)
+      return MessageSystemPigeon(fromNotification, mrp)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
-      inApp,
+      fromNotification,
       mrp,
     )
   }
@@ -385,7 +413,8 @@ data class PluginSettingsPigeon (
   val wss: Boolean? = null,
   val wsPath: String? = null,
   val useTcp: Boolean? = null,
-  val publicKey: String? = null
+  val publicKey: String? = null,
+  val connectorTag: String? = null
 )
  {
   companion object {
@@ -401,7 +430,8 @@ data class PluginSettingsPigeon (
       val wsPath = pigeonVar_list[8] as String?
       val useTcp = pigeonVar_list[9] as Boolean?
       val publicKey = pigeonVar_list[10] as String?
-      return PluginSettingsPigeon(host, deviceId, connectorID, systemType, iconNotification, port, channelNotification, wss, wsPath, useTcp, publicKey)
+      val connectorTag = pigeonVar_list[11] as String?
+      return PluginSettingsPigeon(host, deviceId, connectorID, systemType, iconNotification, port, channelNotification, wss, wsPath, useTcp, publicKey, connectorTag)
     }
   }
   fun toList(): List<Any?> {
@@ -417,6 +447,7 @@ data class PluginSettingsPigeon (
       wsPath,
       useTcp,
       publicKey,
+      connectorTag,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -460,25 +491,30 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          NotificationPigeon.fromList(it)
+          UserPigeon.fromList(it)
         }
       }
       135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          MessageResponsePigeon.fromList(it)
+          NotificationPigeon.fromList(it)
         }
       }
       136.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          MessageSystemPigeon.fromList(it)
+          MessageResponsePigeon.fromList(it)
         }
       }
       137.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RegisterMessagePigeon.fromList(it)
+          MessageSystemPigeon.fromList(it)
         }
       }
       138.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          RegisterMessagePigeon.fromList(it)
+        }
+      }
+      139.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           PluginSettingsPigeon.fromList(it)
         }
@@ -508,24 +544,28 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is NotificationPigeon -> {
+      is UserPigeon -> {
         stream.write(134)
         writeValue(stream, value.toList())
       }
-      is MessageResponsePigeon -> {
+      is NotificationPigeon -> {
         stream.write(135)
         writeValue(stream, value.toList())
       }
-      is MessageSystemPigeon -> {
+      is MessageResponsePigeon -> {
         stream.write(136)
         writeValue(stream, value.toList())
       }
-      is RegisterMessagePigeon -> {
+      is MessageSystemPigeon -> {
         stream.write(137)
         writeValue(stream, value.toList())
       }
-      is PluginSettingsPigeon -> {
+      is RegisterMessagePigeon -> {
         stream.write(138)
+        writeValue(stream, value.toList())
+      }
+      is PluginSettingsPigeon -> {
+        stream.write(139)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -536,8 +576,10 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface LocalPushConnectivityPigeonHostApi {
-  fun initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, callback: (Result<Boolean>) -> Unit)
-  fun config(mode: TCPModePigeon, ssid: String?, callback: (Result<Boolean>) -> Unit)
+  fun initialize(systemType: Long, android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, callback: (Result<Boolean>) -> Unit)
+  fun config(mode: TCPModePigeon, ssids: List<String>?, callback: (Result<Boolean>) -> Unit)
+  fun registerUser(user: UserPigeon, callback: (Result<Boolean>) -> Unit)
+  fun deviceID(callback: (Result<String>) -> Unit)
   fun requestPermission(callback: (Result<Boolean>) -> Unit)
   fun start(callback: (Result<Boolean>) -> Unit)
   fun stop(callback: (Result<Boolean>) -> Unit)
@@ -556,11 +598,12 @@ interface LocalPushConnectivityPigeonHostApi {
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
-            val androidArg = args[0] as AndroidSettingsPigeon?
-            val windowsArg = args[1] as WindowsSettingsPigeon?
-            val iosArg = args[2] as IosSettingsPigeon?
-            val modeArg = args[3] as TCPModePigeon
-            api.initialize(androidArg, windowsArg, iosArg, modeArg) { result: Result<Boolean> ->
+            val systemTypeArg = args[0] as Long
+            val androidArg = args[1] as AndroidSettingsPigeon?
+            val windowsArg = args[2] as WindowsSettingsPigeon?
+            val iosArg = args[3] as IosSettingsPigeon?
+            val modeArg = args[4] as TCPModePigeon
+            api.initialize(systemTypeArg, androidArg, windowsArg, iosArg, modeArg) { result: Result<Boolean> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
@@ -580,8 +623,46 @@ interface LocalPushConnectivityPigeonHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val modeArg = args[0] as TCPModePigeon
-            val ssidArg = args[1] as String?
-            api.config(modeArg, ssidArg) { result: Result<Boolean> ->
+            val ssidsArg = args[1] as List<String>?
+            api.config(modeArg, ssidsArg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.registerUser$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val userArg = args[0] as UserPigeon
+            api.registerUser(userArg) { result: Result<Boolean> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.deviceID$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.deviceID{ result: Result<String> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
@@ -660,7 +741,7 @@ class LocalPushConnectivityPigeonFlutterApi(private val binaryMessenger: BinaryM
       MessagesPigeonCodec()
     }
   }
-  fun onMessage(mrpArg: MessageResponsePigeon, callback: (Result<Unit>) -> Unit)
+  fun onMessage(mrpArg: MessageSystemPigeon, callback: (Result<Unit>) -> Unit)
 {
     val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
     val channelName = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage$separatedMessageChannelSuffix"

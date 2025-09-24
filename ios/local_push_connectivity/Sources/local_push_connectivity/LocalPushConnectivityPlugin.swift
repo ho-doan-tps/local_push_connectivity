@@ -99,7 +99,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         }
     }
     
-    func initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void){
+    func initialize(systemType: Int64, android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void){
         if ios == nil {
             completion(.failure(NSError(domain: "ios settings invalid", code: 1)))
             return
@@ -111,12 +111,11 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         settings.port = Int(mode.port)
         settings.wsPath = mode.path
         settings.wss = mode.connectionType == .wss
-        settings.useTcp = mode.connectionType == .tcp
-        settings.systemType = 1
-        settings.connectorID = "4"
+        settings.useTcp = mode.connectionType == .tcpTls
         settings.deviceId = UIDevice.current.identifierForVendor?.uuidString
-        if let ssid = ios?.ssid {
-            settings.ssid = [ssid]
+        settings.systemType = Int(systemType)
+        if let ssids = ios?.ssids {
+            settings.ssid = ssids
         }
         
         self.settings = self.settings.copyWith(settings: settings)
@@ -145,7 +144,21 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         
         completion(.success(true))
     }
-    func config(mode: TCPModePigeon, ssid: String?, completion: @escaping (Result<Bool, Error>) -> Void){
+
+    func deviceID(completion: @escaping (Result<String, Error>) -> Void){
+        completion(.success(UIDevice.current.identifierForVendor?.uuidString ?? ""))
+    }
+
+    func registerUser(user: UserPigeon, completion: @escaping (Result<Bool, Error>) -> Void){
+        var settings = Settings()
+        settings.connectorID = user.connectorID
+        settings.connectorTag = user.connectorTag
+        self.settings = self.settings.copyWith(settings: settings)
+        try? self.set(settings: self.settings)
+        completion(.success(true))
+    }
+    
+    func config(mode: TCPModePigeon, ssids: [String]?, completion: @escaping (Result<Bool, Error>) -> Void){
         var settings = Settings()
         settings.host = mode.host
         settings.publicKey = mode.publicHasKey
@@ -153,10 +166,8 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         settings.wsPath = mode.path
         settings.wss = mode.connectionType == .wss
         settings.useTcp = mode.connectionType == .tcp
-        settings.systemType = 1
-        settings.connectorID = "4"
-        if let ssid = ssid {
-            settings.ssid = [ssid]
+        if let ssids = ssids {
+            settings.ssid = ssids
         }
         
         self.settings = self.settings.copyWith(settings: settings)
@@ -238,7 +249,7 @@ extension LocalPushConnectivityPlugin: UNUserNotificationCenterDelegate {
     public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         print("userNotificationCenter didReceive response: \(response.notification.request.content.userInfo["payload"])")
         if let payload = response.notification.request.content.userInfo["payload"] as? String {
-            flutterApi?.onMessage(message: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload)) {
+            flutterApi?.onMessage(mrp: MessageSystemPigeon(fromNotification: true, mrp: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload))) {
                 result in
                 switch result {
                 case .failure(let error):
@@ -254,7 +265,7 @@ extension LocalPushConnectivityPlugin: UNUserNotificationCenterDelegate {
     public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         print("userNotificationCenter willPresent notification: \(notification.request.content.userInfo["payload"])")
         if let payload = notification.request.content.userInfo["payload"] as? String {
-            flutterApi?.onMessage(message: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload)) {
+            flutterApi?.onMessage(mrp: MessageSystemPigeon(fromNotification: false, mrp: MessageResponsePigeon(notification: NotificationPigeon(title: "a", body: "b"), mPayload: payload))) {
                 result in
                 switch result {
                 case .failure(let error):

@@ -280,52 +280,78 @@ WindowsSettingsPigeon WindowsSettingsPigeon::FromEncodableList(const EncodableLi
 
 // IosSettingsPigeon
 
-IosSettingsPigeon::IosSettingsPigeon(bool enable_s_s_i_d)
- : enable_s_s_i_d_(enable_s_s_i_d) {}
+IosSettingsPigeon::IosSettingsPigeon() {}
 
-IosSettingsPigeon::IosSettingsPigeon(
-  const std::string* ssid,
-  bool enable_s_s_i_d)
- : ssid_(ssid ? std::optional<std::string>(*ssid) : std::nullopt),
-    enable_s_s_i_d_(enable_s_s_i_d) {}
+IosSettingsPigeon::IosSettingsPigeon(const EncodableList* ssids)
+ : ssids_(ssids ? std::optional<EncodableList>(*ssids) : std::nullopt) {}
 
-const std::string* IosSettingsPigeon::ssid() const {
-  return ssid_ ? &(*ssid_) : nullptr;
+const EncodableList* IosSettingsPigeon::ssids() const {
+  return ssids_ ? &(*ssids_) : nullptr;
 }
 
-void IosSettingsPigeon::set_ssid(const std::string_view* value_arg) {
-  ssid_ = value_arg ? std::optional<std::string>(*value_arg) : std::nullopt;
+void IosSettingsPigeon::set_ssids(const EncodableList* value_arg) {
+  ssids_ = value_arg ? std::optional<EncodableList>(*value_arg) : std::nullopt;
 }
 
-void IosSettingsPigeon::set_ssid(std::string_view value_arg) {
-  ssid_ = value_arg;
-}
-
-
-bool IosSettingsPigeon::enable_s_s_i_d() const {
-  return enable_s_s_i_d_;
-}
-
-void IosSettingsPigeon::set_enable_s_s_i_d(bool value_arg) {
-  enable_s_s_i_d_ = value_arg;
+void IosSettingsPigeon::set_ssids(const EncodableList& value_arg) {
+  ssids_ = value_arg;
 }
 
 
 EncodableList IosSettingsPigeon::ToEncodableList() const {
   EncodableList list;
-  list.reserve(2);
-  list.push_back(ssid_ ? EncodableValue(*ssid_) : EncodableValue());
-  list.push_back(EncodableValue(enable_s_s_i_d_));
+  list.reserve(1);
+  list.push_back(ssids_ ? EncodableValue(*ssids_) : EncodableValue());
   return list;
 }
 
 IosSettingsPigeon IosSettingsPigeon::FromEncodableList(const EncodableList& list) {
-  IosSettingsPigeon decoded(
-    std::get<bool>(list[1]));
-  auto& encodable_ssid = list[0];
-  if (!encodable_ssid.IsNull()) {
-    decoded.set_ssid(std::get<std::string>(encodable_ssid));
+  IosSettingsPigeon decoded;
+  auto& encodable_ssids = list[0];
+  if (!encodable_ssids.IsNull()) {
+    decoded.set_ssids(std::get<EncodableList>(encodable_ssids));
   }
+  return decoded;
+}
+
+// UserPigeon
+
+UserPigeon::UserPigeon(
+  const std::string& connector_i_d,
+  const std::string& connector_tag)
+ : connector_i_d_(connector_i_d),
+    connector_tag_(connector_tag) {}
+
+const std::string& UserPigeon::connector_i_d() const {
+  return connector_i_d_;
+}
+
+void UserPigeon::set_connector_i_d(std::string_view value_arg) {
+  connector_i_d_ = value_arg;
+}
+
+
+const std::string& UserPigeon::connector_tag() const {
+  return connector_tag_;
+}
+
+void UserPigeon::set_connector_tag(std::string_view value_arg) {
+  connector_tag_ = value_arg;
+}
+
+
+EncodableList UserPigeon::ToEncodableList() const {
+  EncodableList list;
+  list.reserve(2);
+  list.push_back(EncodableValue(connector_i_d_));
+  list.push_back(EncodableValue(connector_tag_));
+  return list;
+}
+
+UserPigeon UserPigeon::FromEncodableList(const EncodableList& list) {
+  UserPigeon decoded(
+    std::get<std::string>(list[0]),
+    std::get<std::string>(list[1]));
   return decoded;
 }
 
@@ -424,27 +450,27 @@ MessageResponsePigeon MessageResponsePigeon::FromEncodableList(const EncodableLi
 // MessageSystemPigeon
 
 MessageSystemPigeon::MessageSystemPigeon(
-  bool in_app,
+  bool from_notification,
   const MessageResponsePigeon& mrp)
- : in_app_(in_app),
+ : from_notification_(from_notification),
     mrp_(std::make_unique<MessageResponsePigeon>(mrp)) {}
 
 MessageSystemPigeon::MessageSystemPigeon(const MessageSystemPigeon& other)
- : in_app_(other.in_app_),
+ : from_notification_(other.from_notification_),
     mrp_(std::make_unique<MessageResponsePigeon>(*other.mrp_)) {}
 
 MessageSystemPigeon& MessageSystemPigeon::operator=(const MessageSystemPigeon& other) {
-  in_app_ = other.in_app_;
+  from_notification_ = other.from_notification_;
   mrp_ = std::make_unique<MessageResponsePigeon>(*other.mrp_);
   return *this;
 }
 
-bool MessageSystemPigeon::in_app() const {
-  return in_app_;
+bool MessageSystemPigeon::from_notification() const {
+  return from_notification_;
 }
 
-void MessageSystemPigeon::set_in_app(bool value_arg) {
-  in_app_ = value_arg;
+void MessageSystemPigeon::set_from_notification(bool value_arg) {
+  from_notification_ = value_arg;
 }
 
 
@@ -460,7 +486,7 @@ void MessageSystemPigeon::set_mrp(const MessageResponsePigeon& value_arg) {
 EncodableList MessageSystemPigeon::ToEncodableList() const {
   EncodableList list;
   list.reserve(2);
-  list.push_back(EncodableValue(in_app_));
+  list.push_back(EncodableValue(from_notification_));
   list.push_back(CustomEncodableValue(*mrp_));
   return list;
 }
@@ -554,7 +580,8 @@ PluginSettingsPigeon::PluginSettingsPigeon(
   const bool* wss,
   const std::string* ws_path,
   const bool* use_tcp,
-  const std::string* public_key)
+  const std::string* public_key,
+  const std::string* connector_tag)
  : host_(host ? std::optional<std::string>(*host) : std::nullopt),
     device_id_(device_id ? std::optional<std::string>(*device_id) : std::nullopt),
     connector_i_d_(connector_i_d ? std::optional<std::string>(*connector_i_d) : std::nullopt),
@@ -565,7 +592,8 @@ PluginSettingsPigeon::PluginSettingsPigeon(
     wss_(wss ? std::optional<bool>(*wss) : std::nullopt),
     ws_path_(ws_path ? std::optional<std::string>(*ws_path) : std::nullopt),
     use_tcp_(use_tcp ? std::optional<bool>(*use_tcp) : std::nullopt),
-    public_key_(public_key ? std::optional<std::string>(*public_key) : std::nullopt) {}
+    public_key_(public_key ? std::optional<std::string>(*public_key) : std::nullopt),
+    connector_tag_(connector_tag ? std::optional<std::string>(*connector_tag) : std::nullopt) {}
 
 const std::string* PluginSettingsPigeon::host() const {
   return host_ ? &(*host_) : nullptr;
@@ -710,9 +738,22 @@ void PluginSettingsPigeon::set_public_key(std::string_view value_arg) {
 }
 
 
+const std::string* PluginSettingsPigeon::connector_tag() const {
+  return connector_tag_ ? &(*connector_tag_) : nullptr;
+}
+
+void PluginSettingsPigeon::set_connector_tag(const std::string_view* value_arg) {
+  connector_tag_ = value_arg ? std::optional<std::string>(*value_arg) : std::nullopt;
+}
+
+void PluginSettingsPigeon::set_connector_tag(std::string_view value_arg) {
+  connector_tag_ = value_arg;
+}
+
+
 EncodableList PluginSettingsPigeon::ToEncodableList() const {
   EncodableList list;
-  list.reserve(11);
+  list.reserve(12);
   list.push_back(host_ ? EncodableValue(*host_) : EncodableValue());
   list.push_back(device_id_ ? EncodableValue(*device_id_) : EncodableValue());
   list.push_back(connector_i_d_ ? EncodableValue(*connector_i_d_) : EncodableValue());
@@ -724,6 +765,7 @@ EncodableList PluginSettingsPigeon::ToEncodableList() const {
   list.push_back(ws_path_ ? EncodableValue(*ws_path_) : EncodableValue());
   list.push_back(use_tcp_ ? EncodableValue(*use_tcp_) : EncodableValue());
   list.push_back(public_key_ ? EncodableValue(*public_key_) : EncodableValue());
+  list.push_back(connector_tag_ ? EncodableValue(*connector_tag_) : EncodableValue());
   return list;
 }
 
@@ -773,6 +815,10 @@ PluginSettingsPigeon PluginSettingsPigeon::FromEncodableList(const EncodableList
   if (!encodable_public_key.IsNull()) {
     decoded.set_public_key(std::get<std::string>(encodable_public_key));
   }
+  auto& encodable_connector_tag = list[11];
+  if (!encodable_connector_tag.IsNull()) {
+    decoded.set_connector_tag(std::get<std::string>(encodable_connector_tag));
+  }
   return decoded;
 }
 
@@ -801,18 +847,21 @@ EncodableValue PigeonInternalCodecSerializer::ReadValueOfType(
         return CustomEncodableValue(IosSettingsPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 134: {
-        return CustomEncodableValue(NotificationPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+        return CustomEncodableValue(UserPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 135: {
-        return CustomEncodableValue(MessageResponsePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+        return CustomEncodableValue(NotificationPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 136: {
-        return CustomEncodableValue(MessageSystemPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+        return CustomEncodableValue(MessageResponsePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 137: {
-        return CustomEncodableValue(RegisterMessagePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+        return CustomEncodableValue(MessageSystemPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     case 138: {
+        return CustomEncodableValue(RegisterMessagePigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
+      }
+    case 139: {
         return CustomEncodableValue(PluginSettingsPigeon::FromEncodableList(std::get<EncodableList>(ReadValue(stream))));
       }
     default:
@@ -849,28 +898,33 @@ void PigeonInternalCodecSerializer::WriteValue(
       WriteValue(EncodableValue(std::any_cast<IosSettingsPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
-    if (custom_value->type() == typeid(NotificationPigeon)) {
+    if (custom_value->type() == typeid(UserPigeon)) {
       stream->WriteByte(134);
+      WriteValue(EncodableValue(std::any_cast<UserPigeon>(*custom_value).ToEncodableList()), stream);
+      return;
+    }
+    if (custom_value->type() == typeid(NotificationPigeon)) {
+      stream->WriteByte(135);
       WriteValue(EncodableValue(std::any_cast<NotificationPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(MessageResponsePigeon)) {
-      stream->WriteByte(135);
+      stream->WriteByte(136);
       WriteValue(EncodableValue(std::any_cast<MessageResponsePigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(MessageSystemPigeon)) {
-      stream->WriteByte(136);
+      stream->WriteByte(137);
       WriteValue(EncodableValue(std::any_cast<MessageSystemPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(RegisterMessagePigeon)) {
-      stream->WriteByte(137);
+      stream->WriteByte(138);
       WriteValue(EncodableValue(std::any_cast<RegisterMessagePigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
     if (custom_value->type() == typeid(PluginSettingsPigeon)) {
-      stream->WriteByte(138);
+      stream->WriteByte(139);
       WriteValue(EncodableValue(std::any_cast<PluginSettingsPigeon>(*custom_value).ToEncodableList()), stream);
       return;
     }
@@ -901,19 +955,25 @@ void LocalPushConnectivityPigeonHostApi::SetUp(
       channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
         try {
           const auto& args = std::get<EncodableList>(message);
-          const auto& encodable_android_arg = args.at(0);
+          const auto& encodable_system_type_arg = args.at(0);
+          if (encodable_system_type_arg.IsNull()) {
+            reply(WrapError("system_type_arg unexpectedly null."));
+            return;
+          }
+          const int64_t system_type_arg = encodable_system_type_arg.LongValue();
+          const auto& encodable_android_arg = args.at(1);
           const auto* android_arg = encodable_android_arg.IsNull() ? nullptr : &(std::any_cast<const AndroidSettingsPigeon&>(std::get<CustomEncodableValue>(encodable_android_arg)));
-          const auto& encodable_windows_arg = args.at(1);
+          const auto& encodable_windows_arg = args.at(2);
           const auto* windows_arg = encodable_windows_arg.IsNull() ? nullptr : &(std::any_cast<const WindowsSettingsPigeon&>(std::get<CustomEncodableValue>(encodable_windows_arg)));
-          const auto& encodable_ios_arg = args.at(2);
+          const auto& encodable_ios_arg = args.at(3);
           const auto* ios_arg = encodable_ios_arg.IsNull() ? nullptr : &(std::any_cast<const IosSettingsPigeon&>(std::get<CustomEncodableValue>(encodable_ios_arg)));
-          const auto& encodable_mode_arg = args.at(3);
+          const auto& encodable_mode_arg = args.at(4);
           if (encodable_mode_arg.IsNull()) {
             reply(WrapError("mode_arg unexpectedly null."));
             return;
           }
           const auto& mode_arg = std::any_cast<const TCPModePigeon&>(std::get<CustomEncodableValue>(encodable_mode_arg));
-          api->Initialize(android_arg, windows_arg, ios_arg, mode_arg, [reply](ErrorOr<bool>&& output) {
+          api->Initialize(system_type_arg, android_arg, windows_arg, ios_arg, mode_arg, [reply](ErrorOr<bool>&& output) {
             if (output.has_error()) {
               reply(WrapError(output.error()));
               return;
@@ -942,9 +1002,60 @@ void LocalPushConnectivityPigeonHostApi::SetUp(
             return;
           }
           const auto& mode_arg = std::any_cast<const TCPModePigeon&>(std::get<CustomEncodableValue>(encodable_mode_arg));
-          const auto& encodable_ssid_arg = args.at(1);
-          const auto* ssid_arg = std::get_if<std::string>(&encodable_ssid_arg);
-          api->Config(mode_arg, ssid_arg, [reply](ErrorOr<bool>&& output) {
+          const auto& encodable_ssids_arg = args.at(1);
+          const auto* ssids_arg = std::get_if<EncodableList>(&encodable_ssids_arg);
+          api->Config(mode_arg, ssids_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.registerUser" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          const auto& args = std::get<EncodableList>(message);
+          const auto& encodable_user_arg = args.at(0);
+          if (encodable_user_arg.IsNull()) {
+            reply(WrapError("user_arg unexpectedly null."));
+            return;
+          }
+          const auto& user_arg = std::any_cast<const UserPigeon&>(std::get<CustomEncodableValue>(encodable_user_arg));
+          api->RegisterUser(user_arg, [reply](ErrorOr<bool>&& output) {
+            if (output.has_error()) {
+              reply(WrapError(output.error()));
+              return;
+            }
+            EncodableList wrapped;
+            wrapped.push_back(EncodableValue(std::move(output).TakeValue()));
+            reply(EncodableValue(std::move(wrapped)));
+          });
+        } catch (const std::exception& exception) {
+          reply(WrapError(exception.what()));
+        }
+      });
+    } else {
+      channel.SetMessageHandler(nullptr);
+    }
+  }
+  {
+    BasicMessageChannel<> channel(binary_messenger, "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.deviceID" + prepended_suffix, &GetCodec());
+    if (api != nullptr) {
+      channel.SetMessageHandler([api](const EncodableValue& message, const flutter::MessageReply<EncodableValue>& reply) {
+        try {
+          api->DeviceID([reply](ErrorOr<std::string>&& output) {
             if (output.has_error()) {
               reply(WrapError(output.error()));
               return;
@@ -1061,7 +1172,7 @@ const flutter::StandardMessageCodec& LocalPushConnectivityPigeonFlutterApi::GetC
 }
 
 void LocalPushConnectivityPigeonFlutterApi::OnMessage(
-  const MessageResponsePigeon& mrp_arg,
+  const MessageSystemPigeon& mrp_arg,
   std::function<void(void)>&& on_success,
   std::function<void(const FlutterError&)>&& on_error) {
   const std::string channel_name = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage" + message_channel_suffix_;

@@ -27,33 +27,33 @@ class PigeonWrapper {
 }
 
 @Serializable
-data class RegisterMessage(
-    @SerialName("MessageType")
+data class RegisterModel(
     val messageType: String,
-    @SerialName("SendConnectorID")
-    val sendConnectorID: String,
-    @SerialName("SendDeviceId")
-    val sendDeviceId: String,
-    @SerialName("SystemType")
-    val systemType: Long
-) {
-    companion object {
-        fun fromPigeon(model: RegisterMessagePigeon): RegisterMessage {
-            return RegisterMessage(
-                messageType = model.messageType,
-                systemType = model.systemType,
-                sendConnectorID = model.sendConnectorID,
-                sendDeviceId = model.sendDeviceId,
-            )
-        }
-    }
-}
+    val systemType: Long,
+    val sender: SenderRegister,
+    val data: DataRegister
+)
+
+@Serializable
+data class SenderRegister(
+    val connectorID: String,
+    val connectorTag: String,
+    val deviceID: String
+)
+
+@Serializable
+data class DataRegister(
+    val apnsToken: String?,
+    val applicationID: String?,
+    val apnsServerType: Int?
+)
 
 @Serializable
 data class PluginSettings(
     val host: String? = null,
     var deviceId: String? = null,
     var connectorID: String? = null,
+    var connectorTag: String? = null,
     val systemType: Long? = null,
     val iconNotification: String? = null,
     val port: Long? = null,
@@ -69,6 +69,7 @@ data class PluginSettings(
                 model.host,
                 model.deviceId,
                 model.connectorID,
+                model.connectorTag,
                 model.systemType,
                 model.iconNotification,
                 model.port,
@@ -86,6 +87,7 @@ data class PluginSettings(
             host = model.host ?: host,
             deviceId = model.deviceId ?: deviceId,
             connectorID = model.connectorID ?: (if (useOldUser) connectorID else null),
+            connectorTag = model.connectorTag,
             systemType = model.systemType ?: systemType,
             iconNotification = model.iconNotification ?: iconNotification,
             channelNotification = model.channelNotification ?: channelNotification,
@@ -98,17 +100,15 @@ data class PluginSettings(
 }
 
 @Serializable
-data class Notification(
-    @SerialName("Title")
-    val title: String,
-    @SerialName("Body")
-    val body: String
+data class NotificationModel(
+    val Title: String,
+    val Body: String
 ) {
     companion object {
-        fun fromPigeon(model: NotificationPigeon): Notification {
-            return Notification(
-                title = model.title,
-                body = model.body
+        fun fromPigeon(model: NotificationPigeon): NotificationModel {
+            return NotificationModel(
+                Title = model.title,
+                Body = model.body
             )
         }
     }
@@ -116,22 +116,31 @@ data class Notification(
 
 @Serializable
 data class MessageResponse(
-    @SerialName("Notification")
-    val notification: Notification,
+    val Notification: NotificationModel,
     val mPayload: String? = null
 ) {
     companion object {
         fun fromPigeon(model: MessageResponsePigeon): MessageResponse {
             return MessageResponse(
-                notification = Notification.fromPigeon(model.notification)
+                Notification = NotificationModel.fromPigeon(model.notification)
             )
         }
     }
 
     fun toPigeon(str: String): MessageResponsePigeon {
         return MessageResponsePigeon(
-            NotificationPigeon(notification.title, notification.body),
+            NotificationPigeon(Notification.Title, Notification.Body),
             str
         )
     }
 }
+
+@Serializable
+data class PingModel(
+    val messageType: String
+)
+
+@Serializable
+data class PongModel(
+    val pong: String?
+)

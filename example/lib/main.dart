@@ -22,6 +22,7 @@ void main() async {
       WidgetsFlutterBinding.ensureInitialized();
       await LocalPushConnectivity.instance.requestPermission();
       await LocalPushConnectivity.instance.initialize(
+        systemType: 0,
         windows: WindowsSettingsPigeon(
           displayName: 'Local Push Sample',
           bundleId: 'com.hodoan.local_push_connectivity_example',
@@ -33,11 +34,10 @@ void main() async {
           channelNotification:
               'com.hodoan.local_push_connectivity_example.notification',
         ),
-        ios: IosSettingsPigeon(ssid: 'TPSSmartoffice', enableSSID: true),
-        // web: const WebSettings(),
+        ios: IosSettingsPigeon(ssids: ['TPSSmartoffice']),
         mode: TCPModePigeon(
           // host: 'ho-doan.com',
-          host: '192.168.50.66',
+          host: '192.168.50.42',
           port: 4040,
           connectionType: ConnectionType.ws,
           // wss: false,
@@ -97,6 +97,9 @@ class _MyAppState extends State<MyApp> {
           connectionType: ConnectionType.ws,
           path: '/ws/',
         ),
+      );
+      await LocalPushConnectivity.instance.registerUser(
+        UserPigeon(connectorID: '1234567890', connectorTag: 'test'),
       );
     } catch (e, s) {
       log(e.toString(), stackTrace: s);

@@ -5,9 +5,11 @@ import android.content.ContentResolver
 import android.provider.Settings
 import android.util.Log
 import com.hodoan.local_push_connectivity.services.ReceiverCallback
+import com.hodoan.local_push_connectivity.wrapper.DataRegister
 import com.hodoan.local_push_connectivity.wrapper.PigeonWrapper
 import com.hodoan.local_push_connectivity.wrapper.PluginSettings
-import com.hodoan.local_push_connectivity.wrapper.RegisterMessage
+import com.hodoan.local_push_connectivity.wrapper.RegisterModel
+import com.hodoan.local_push_connectivity.wrapper.SenderRegister
 import java.util.Timer
 import java.util.TimerTask
 
@@ -60,11 +62,15 @@ abstract class ISocket(
                 || settings.deviceId == null
 
     fun messageRegister(): String = PigeonWrapper.toString(
-        RegisterMessage(
+        RegisterModel(
             messageType = "register",
-            sendConnectorID = settings.connectorID ?: "",
             systemType = settings.systemType ?: -1,
-            sendDeviceId = settings.deviceId ?: ""
+            sender = SenderRegister(
+                connectorTag = settings.connectorTag ?: "",
+                connectorID = settings.connectorID ?: "",
+                deviceID = settings.deviceId ?: "",
+            ),
+            data = DataRegister(null, null, null)
         )
     )
 
@@ -78,7 +84,10 @@ abstract class ISocket(
         timer = Timer()
         timerTask = object : TimerTask() {
             override fun run() {
-                Log.d(TAG, "run ${timer.hashCode()} ISocket ${this.hashCode()}: $isConnected $settings")
+                Log.d(
+                    TAG,
+                    "run: $isConnected $settings"
+                )
             }
         }
         timer?.schedule(timerTask, 0, 8000)

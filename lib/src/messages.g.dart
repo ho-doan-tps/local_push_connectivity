@@ -225,18 +225,14 @@ class WindowsSettingsPigeon {
 
 class IosSettingsPigeon {
   IosSettingsPigeon({
-    this.ssid,
-    required this.enableSSID,
+    this.ssids,
   });
 
-  String? ssid;
-
-  bool enableSSID;
+  List<String>? ssids;
 
   List<Object?> _toList() {
     return <Object?>[
-      ssid,
-      enableSSID,
+      ssids,
     ];
   }
 
@@ -246,8 +242,7 @@ class IosSettingsPigeon {
   static IosSettingsPigeon decode(Object result) {
     result as List<Object?>;
     return IosSettingsPigeon(
-      ssid: result[0] as String?,
-      enableSSID: result[1]! as bool,
+      ssids: (result[0] as List<Object?>?)?.cast<String>(),
     );
   }
 
@@ -255,6 +250,52 @@ class IosSettingsPigeon {
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
     if (other is! IosSettingsPigeon || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(encode(), other.encode());
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => Object.hashAll(_toList())
+;
+}
+
+class UserPigeon {
+  UserPigeon({
+    required this.connectorID,
+    required this.connectorTag,
+  });
+
+  String connectorID;
+
+  String connectorTag;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      connectorID,
+      connectorTag,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static UserPigeon decode(Object result) {
+    result as List<Object?>;
+    return UserPigeon(
+      connectorID: result[0]! as String,
+      connectorTag: result[1]! as String,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! UserPigeon || other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -363,17 +404,17 @@ class MessageResponsePigeon {
 
 class MessageSystemPigeon {
   MessageSystemPigeon({
-    required this.inApp,
+    required this.fromNotification,
     required this.mrp,
   });
 
-  bool inApp;
+  bool fromNotification;
 
   MessageResponsePigeon mrp;
 
   List<Object?> _toList() {
     return <Object?>[
-      inApp,
+      fromNotification,
       mrp,
     ];
   }
@@ -384,7 +425,7 @@ class MessageSystemPigeon {
   static MessageSystemPigeon decode(Object result) {
     result as List<Object?>;
     return MessageSystemPigeon(
-      inApp: result[0]! as bool,
+      fromNotification: result[0]! as bool,
       mrp: result[1]! as MessageResponsePigeon,
     );
   }
@@ -476,6 +517,7 @@ class PluginSettingsPigeon {
     this.wsPath,
     this.useTcp,
     this.publicKey,
+    this.connectorTag,
   });
 
   String? host;
@@ -500,6 +542,8 @@ class PluginSettingsPigeon {
 
   String? publicKey;
 
+  String? connectorTag;
+
   List<Object?> _toList() {
     return <Object?>[
       host,
@@ -513,6 +557,7 @@ class PluginSettingsPigeon {
       wsPath,
       useTcp,
       publicKey,
+      connectorTag,
     ];
   }
 
@@ -533,6 +578,7 @@ class PluginSettingsPigeon {
       wsPath: result[8] as String?,
       useTcp: result[9] as bool?,
       publicKey: result[10] as String?,
+      connectorTag: result[11] as String?,
     );
   }
 
@@ -577,20 +623,23 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is IosSettingsPigeon) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is NotificationPigeon) {
+    }    else if (value is UserPigeon) {
       buffer.putUint8(134);
       writeValue(buffer, value.encode());
-    }    else if (value is MessageResponsePigeon) {
+    }    else if (value is NotificationPigeon) {
       buffer.putUint8(135);
       writeValue(buffer, value.encode());
-    }    else if (value is MessageSystemPigeon) {
+    }    else if (value is MessageResponsePigeon) {
       buffer.putUint8(136);
       writeValue(buffer, value.encode());
-    }    else if (value is RegisterMessagePigeon) {
+    }    else if (value is MessageSystemPigeon) {
       buffer.putUint8(137);
       writeValue(buffer, value.encode());
-    }    else if (value is PluginSettingsPigeon) {
+    }    else if (value is RegisterMessagePigeon) {
       buffer.putUint8(138);
+      writeValue(buffer, value.encode());
+    }    else if (value is PluginSettingsPigeon) {
+      buffer.putUint8(139);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -612,14 +661,16 @@ class _PigeonCodec extends StandardMessageCodec {
       case 133: 
         return IosSettingsPigeon.decode(readValue(buffer)!);
       case 134: 
-        return NotificationPigeon.decode(readValue(buffer)!);
+        return UserPigeon.decode(readValue(buffer)!);
       case 135: 
-        return MessageResponsePigeon.decode(readValue(buffer)!);
+        return NotificationPigeon.decode(readValue(buffer)!);
       case 136: 
-        return MessageSystemPigeon.decode(readValue(buffer)!);
+        return MessageResponsePigeon.decode(readValue(buffer)!);
       case 137: 
-        return RegisterMessagePigeon.decode(readValue(buffer)!);
+        return MessageSystemPigeon.decode(readValue(buffer)!);
       case 138: 
+        return RegisterMessagePigeon.decode(readValue(buffer)!);
+      case 139: 
         return PluginSettingsPigeon.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -640,14 +691,14 @@ class LocalPushConnectivityPigeonHostApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  Future<bool> initialize({AndroidSettingsPigeon? android, WindowsSettingsPigeon? windows, IosSettingsPigeon? ios, required TCPModePigeon mode, }) async {
+  Future<bool> initialize({required int systemType, AndroidSettingsPigeon? android, WindowsSettingsPigeon? windows, IosSettingsPigeon? ios, required TCPModePigeon mode, }) async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.initialize$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[android, windows, ios, mode]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[systemType, android, windows, ios, mode]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -668,14 +719,14 @@ class LocalPushConnectivityPigeonHostApi {
     }
   }
 
-  Future<bool> config(TCPModePigeon mode, [String? ssid]) async {
+  Future<bool> config(TCPModePigeon mode, [List<String>? ssids]) async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.config$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[mode, ssid]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[mode, ssids]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -693,6 +744,62 @@ class LocalPushConnectivityPigeonHostApi {
       );
     } else {
       return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<bool> registerUser(UserPigeon user) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.registerUser$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[user]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
+    }
+  }
+
+  Future<String> deviceID() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.deviceID$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as String?)!;
     }
   }
 
@@ -784,7 +891,7 @@ class LocalPushConnectivityPigeonHostApi {
 abstract class LocalPushConnectivityPigeonFlutterApi {
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
 
-  Future<void> onMessage(MessageResponsePigeon mrp);
+  Future<void> onMessage(MessageSystemPigeon mrp);
 
   static void setUp(LocalPushConnectivityPigeonFlutterApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
     messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
@@ -799,9 +906,9 @@ abstract class LocalPushConnectivityPigeonFlutterApi {
           assert(message != null,
           'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null.');
           final List<Object?> args = (message as List<Object?>?)!;
-          final MessageResponsePigeon? arg_mrp = (args[0] as MessageResponsePigeon?);
+          final MessageSystemPigeon? arg_mrp = (args[0] as MessageSystemPigeon?);
           assert(arg_mrp != null,
-              'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null, expected non-null MessageResponsePigeon.');
+              'Argument for dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage was null, expected non-null MessageSystemPigeon.');
           try {
             await api.onMessage(arg_mrp!);
             return wrapResponse(empty: true);

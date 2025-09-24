@@ -260,27 +260,52 @@ struct WindowsSettingsPigeon: Hashable {
 
 /// Generated class from Pigeon that represents data sent in messages.
 struct IosSettingsPigeon: Hashable {
-  var ssid: String? = nil
-  var enableSSID: Bool
+  var ssids: [String]? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> IosSettingsPigeon? {
-    let ssid: String? = nilOrValue(pigeonVar_list[0])
-    let enableSSID = pigeonVar_list[1] as! Bool
+    let ssids: [String]? = nilOrValue(pigeonVar_list[0])
 
     return IosSettingsPigeon(
-      ssid: ssid,
-      enableSSID: enableSSID
+      ssids: ssids
     )
   }
   func toList() -> [Any?] {
     return [
-      ssid,
-      enableSSID,
+      ssids
     ]
   }
   static func == (lhs: IosSettingsPigeon, rhs: IosSettingsPigeon) -> Bool {
+    return deepEqualsMessages(lhs.toList(), rhs.toList())  }
+  func hash(into hasher: inout Hasher) {
+    deepHashMessages(value: toList(), hasher: &hasher)
+  }
+}
+
+/// Generated class from Pigeon that represents data sent in messages.
+struct UserPigeon: Hashable {
+  var connectorID: String
+  var connectorTag: String
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> UserPigeon? {
+    let connectorID = pigeonVar_list[0] as! String
+    let connectorTag = pigeonVar_list[1] as! String
+
+    return UserPigeon(
+      connectorID: connectorID,
+      connectorTag: connectorTag
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      connectorID,
+      connectorTag,
+    ]
+  }
+  static func == (lhs: UserPigeon, rhs: UserPigeon) -> Bool {
     return deepEqualsMessages(lhs.toList(), rhs.toList())  }
   func hash(into hasher: inout Hasher) {
     deepHashMessages(value: toList(), hasher: &hasher)
@@ -347,23 +372,23 @@ struct MessageResponsePigeon: Hashable {
 
 /// Generated class from Pigeon that represents data sent in messages.
 struct MessageSystemPigeon: Hashable {
-  var inApp: Bool
+  var fromNotification: Bool
   var mrp: MessageResponsePigeon
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> MessageSystemPigeon? {
-    let inApp = pigeonVar_list[0] as! Bool
+    let fromNotification = pigeonVar_list[0] as! Bool
     let mrp = pigeonVar_list[1] as! MessageResponsePigeon
 
     return MessageSystemPigeon(
-      inApp: inApp,
+      fromNotification: fromNotification,
       mrp: mrp
     )
   }
   func toList() -> [Any?] {
     return [
-      inApp,
+      fromNotification,
       mrp,
     ]
   }
@@ -424,6 +449,7 @@ struct PluginSettingsPigeon: Hashable {
   var wsPath: String? = nil
   var useTcp: Bool? = nil
   var publicKey: String? = nil
+  var connectorTag: String? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -439,6 +465,7 @@ struct PluginSettingsPigeon: Hashable {
     let wsPath: String? = nilOrValue(pigeonVar_list[8])
     let useTcp: Bool? = nilOrValue(pigeonVar_list[9])
     let publicKey: String? = nilOrValue(pigeonVar_list[10])
+    let connectorTag: String? = nilOrValue(pigeonVar_list[11])
 
     return PluginSettingsPigeon(
       host: host,
@@ -451,7 +478,8 @@ struct PluginSettingsPigeon: Hashable {
       wss: wss,
       wsPath: wsPath,
       useTcp: useTcp,
-      publicKey: publicKey
+      publicKey: publicKey,
+      connectorTag: connectorTag
     )
   }
   func toList() -> [Any?] {
@@ -467,6 +495,7 @@ struct PluginSettingsPigeon: Hashable {
       wsPath,
       useTcp,
       publicKey,
+      connectorTag,
     ]
   }
   static func == (lhs: PluginSettingsPigeon, rhs: PluginSettingsPigeon) -> Bool {
@@ -494,14 +523,16 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 133:
       return IosSettingsPigeon.fromList(self.readValue() as! [Any?])
     case 134:
-      return NotificationPigeon.fromList(self.readValue() as! [Any?])
+      return UserPigeon.fromList(self.readValue() as! [Any?])
     case 135:
-      return MessageResponsePigeon.fromList(self.readValue() as! [Any?])
+      return NotificationPigeon.fromList(self.readValue() as! [Any?])
     case 136:
-      return MessageSystemPigeon.fromList(self.readValue() as! [Any?])
+      return MessageResponsePigeon.fromList(self.readValue() as! [Any?])
     case 137:
-      return RegisterMessagePigeon.fromList(self.readValue() as! [Any?])
+      return MessageSystemPigeon.fromList(self.readValue() as! [Any?])
     case 138:
+      return RegisterMessagePigeon.fromList(self.readValue() as! [Any?])
+    case 139:
       return PluginSettingsPigeon.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -526,20 +557,23 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? IosSettingsPigeon {
       super.writeByte(133)
       super.writeValue(value.toList())
-    } else if let value = value as? NotificationPigeon {
+    } else if let value = value as? UserPigeon {
       super.writeByte(134)
       super.writeValue(value.toList())
-    } else if let value = value as? MessageResponsePigeon {
+    } else if let value = value as? NotificationPigeon {
       super.writeByte(135)
       super.writeValue(value.toList())
-    } else if let value = value as? MessageSystemPigeon {
+    } else if let value = value as? MessageResponsePigeon {
       super.writeByte(136)
       super.writeValue(value.toList())
-    } else if let value = value as? RegisterMessagePigeon {
+    } else if let value = value as? MessageSystemPigeon {
       super.writeByte(137)
       super.writeValue(value.toList())
-    } else if let value = value as? PluginSettingsPigeon {
+    } else if let value = value as? RegisterMessagePigeon {
       super.writeByte(138)
+      super.writeValue(value.toList())
+    } else if let value = value as? PluginSettingsPigeon {
+      super.writeByte(139)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -564,8 +598,10 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol LocalPushConnectivityPigeonHostApi {
-  func initialize(android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void)
-  func config(mode: TCPModePigeon, ssid: String?, completion: @escaping (Result<Bool, Error>) -> Void)
+  func initialize(systemType: Int64, android: AndroidSettingsPigeon?, windows: WindowsSettingsPigeon?, ios: IosSettingsPigeon?, mode: TCPModePigeon, completion: @escaping (Result<Bool, Error>) -> Void)
+  func config(mode: TCPModePigeon, ssids: [String]?, completion: @escaping (Result<Bool, Error>) -> Void)
+  func registerUser(user: UserPigeon, completion: @escaping (Result<Bool, Error>) -> Void)
+  func deviceID(completion: @escaping (Result<String, Error>) -> Void)
   func requestPermission(completion: @escaping (Result<Bool, Error>) -> Void)
   func start(completion: @escaping (Result<Bool, Error>) -> Void)
   func stop(completion: @escaping (Result<Bool, Error>) -> Void)
@@ -581,11 +617,12 @@ class LocalPushConnectivityPigeonHostApiSetup {
     if let api = api {
       initializeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
-        let androidArg: AndroidSettingsPigeon? = nilOrValue(args[0])
-        let windowsArg: WindowsSettingsPigeon? = nilOrValue(args[1])
-        let iosArg: IosSettingsPigeon? = nilOrValue(args[2])
-        let modeArg = args[3] as! TCPModePigeon
-        api.initialize(android: androidArg, windows: windowsArg, ios: iosArg, mode: modeArg) { result in
+        let systemTypeArg = args[0] as! Int64
+        let androidArg: AndroidSettingsPigeon? = nilOrValue(args[1])
+        let windowsArg: WindowsSettingsPigeon? = nilOrValue(args[2])
+        let iosArg: IosSettingsPigeon? = nilOrValue(args[3])
+        let modeArg = args[4] as! TCPModePigeon
+        api.initialize(systemType: systemTypeArg, android: androidArg, windows: windowsArg, ios: iosArg, mode: modeArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))
@@ -602,8 +639,8 @@ class LocalPushConnectivityPigeonHostApiSetup {
       configChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let modeArg = args[0] as! TCPModePigeon
-        let ssidArg: String? = nilOrValue(args[1])
-        api.config(mode: modeArg, ssid: ssidArg) { result in
+        let ssidsArg: [String]? = nilOrValue(args[1])
+        api.config(mode: modeArg, ssids: ssidsArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))
@@ -614,6 +651,38 @@ class LocalPushConnectivityPigeonHostApiSetup {
       }
     } else {
       configChannel.setMessageHandler(nil)
+    }
+    let registerUserChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.registerUser\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      registerUserChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let userArg = args[0] as! UserPigeon
+        api.registerUser(user: userArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      registerUserChannel.setMessageHandler(nil)
+    }
+    let deviceIDChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.deviceID\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      deviceIDChannel.setMessageHandler { _, reply in
+        api.deviceID { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      deviceIDChannel.setMessageHandler(nil)
     }
     let requestPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonHostApi.requestPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
@@ -664,7 +733,7 @@ class LocalPushConnectivityPigeonHostApiSetup {
 }
 /// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
 protocol LocalPushConnectivityPigeonFlutterApiProtocol {
-  func onMessage(mrp mrpArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void)
+  func onMessage(mrp mrpArg: MessageSystemPigeon, completion: @escaping (Result<Void, PigeonError>) -> Void)
 }
 class LocalPushConnectivityPigeonFlutterApi: LocalPushConnectivityPigeonFlutterApiProtocol {
   private let binaryMessenger: FlutterBinaryMessenger
@@ -676,7 +745,7 @@ class LocalPushConnectivityPigeonFlutterApi: LocalPushConnectivityPigeonFlutterA
   var codec: MessagesPigeonCodec {
     return MessagesPigeonCodec.shared
   }
-  func onMessage(mrp mrpArg: MessageResponsePigeon, completion: @escaping (Result<Void, PigeonError>) -> Void) {
+  func onMessage(mrp mrpArg: MessageSystemPigeon, completion: @escaping (Result<Void, PigeonError>) -> Void) {
     let channelName: String = "dev.flutter.pigeon.local_push_connectivity.LocalPushConnectivityPigeonFlutterApi.onMessage\(messageChannelSuffix)"
     let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
     channel.sendMessage([mrpArg] as [Any?]) { response in
