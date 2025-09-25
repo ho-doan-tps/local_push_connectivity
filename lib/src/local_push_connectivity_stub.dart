@@ -228,20 +228,19 @@ class LocalPushConnectivity
                 );
               },
             );
-          } else {
-            _controller.add(
-              MessageSystemPigeon(
-                fromNotification: false,
-                mrp: MessageResponsePigeon(
-                  notification: NotificationPigeon(
-                    title: message.notification.title,
-                    body: message.notification.body,
-                  ),
-                  mPayload: event.toString(),
-                ),
-              ),
-            );
           }
+          _controller.add(
+            MessageSystemPigeon(
+              fromNotification: false,
+              mrp: MessageResponsePigeon(
+                notification: NotificationPigeon(
+                  title: message.notification.title,
+                  body: message.notification.body,
+                ),
+                mPayload: event.toString(),
+              ),
+            ),
+          );
         },
         onDone: () {
           log('WebSocket connection closed');

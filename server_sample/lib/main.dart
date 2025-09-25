@@ -234,23 +234,30 @@ class _MyHomePageState extends State<MyHomePage> {
               }
             } else if (message is Uint8List) {
               try {
-                final mess = MessageRegister.fromJson(
-                  jsonDecode(utf8.decode(message)),
-                );
-                if (mounted) {
-                  final socs = clients[mess.sender.connectorID];
-                  setState(() {
-                    clients = Map.from(clients)
-                      ..addAll({
-                        mess.sender.connectorID:
-                            Map<String, WebSocket>.from(socs ?? {})
-                              ..addAll(
-                                {
-                                  mess.sender.deviceID: websocket,
-                                },
-                              )
-                      });
-                  });
+                final json = jsonDecode(utf8.decode(message));
+                log(json.toString());
+                if (json['messageType'] == 'ping') {
+                  websocket.add(jsonEncode(
+                      {'pong': '${DateTime.now().millisecondsSinceEpoch}'}));
+                } else {
+                  final mess = MessageRegister.fromJson(
+                    jsonDecode(utf8.decode(message)),
+                  );
+                  if (mounted) {
+                    final socs = clients[mess.sender.connectorID];
+                    setState(() {
+                      clients = Map.from(clients)
+                        ..addAll({
+                          mess.sender.connectorID:
+                              Map<String, WebSocket>.from(socs ?? {})
+                                ..addAll(
+                                  {
+                                    mess.sender.deviceID: websocket,
+                                  },
+                                )
+                        });
+                    });
+                  }
                 }
               } catch (e, s) {
                 log(e.toString(), stackTrace: s);
@@ -496,20 +503,20 @@ class MessageRegister {
   final String messageType;
   final int systemType;
   final Sender sender;
-  final Data data;
+  final Data? data;
 
   const MessageRegister({
     required this.messageType,
     required this.systemType,
     required this.sender,
-    required this.data,
+    this.data,
   });
   factory MessageRegister.fromJson(Map<String, dynamic> json) =>
       MessageRegister(
         messageType: json['messageType'],
         systemType: json['systemType'],
         sender: Sender.fromJson(json['sender']),
-        data: Data.fromJson(json['data']),
+        data: json['data'] != null ? Data.fromJson(json['data']) : null,
       );
 }
 
