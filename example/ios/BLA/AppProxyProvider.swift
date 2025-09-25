@@ -18,7 +18,6 @@ class AppProxyProvider: NEAppPushProvider {
         }
         socket = ISocket().register()
         socket?.connect()
-        socket?.requestNotificationDebug(payload: "start")
     }
     
     override func stop(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {

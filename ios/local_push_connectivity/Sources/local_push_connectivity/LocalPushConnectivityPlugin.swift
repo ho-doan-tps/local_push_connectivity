@@ -52,10 +52,14 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
                 }
                 
                 print("manager length: \(managers?.count)")
-                
-                guard let manager = managers?.first(where: { !$0.matchSSIDs.isEmpty }) else { return }
-                manager.delegate = self
-                self.preparePush(pushManager: manager)
+                if let manager = managers?.first {
+                    manager.delegate = self
+                    self.preparePush(pushManager: manager)
+                } else {
+                    // No existing manager. If settings look configured, create + save.
+                    let newManager = NEAppPushManager()
+                    self.savePush(pushManager: newManager)
+                }
             }
         }
     }
@@ -121,26 +125,7 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         self.settings = self.settings.copyWith(settings: settings)
         try? self.set(settings: self.settings)
         
-        NEAppPushManager.loadAllFromPreferences { managers, error in
-            if let error = error {
-                print("Failed to load all managers from preferences: \(error)")
-                return
-            }
-            
-            print("manager length: \(managers?.count)")
-            
-            let managersLst = managers
-            
-            for manager in managersLst ?? [] {
-                manager.removeFromPreferences { [weak self] error in
-                    if let error = error {
-                        print("error remove \(error)")
-                    }
-                    print("✅ remove ok")
-                }
-            }
-            self.initializePush()
-        }
+        self.initializePush()
         
         completion(.success(true))
     }
@@ -198,7 +183,24 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
         let encodedSettings = try encoder.encode(settings)
         Self.userDefaults.set(encodedSettings, forKey: Self.settingsKey)
         
-        self.savePush(pushManager: self.pushManager ?? NEAppPushManager())
+        // Decide save/update vs remove based on settings content
+        let shouldRemove = (settings.host == nil || settings.host?.isEmpty == true) && (settings.ssid == nil || settings.ssid?.isEmpty == true)
+        if shouldRemove {
+            if let manager = self.pushManager {
+                manager.removeFromPreferences { [weak self] error in
+                    if let error = error {
+                        print("removeFromPreferences error: \(error)")
+                    } else {
+                        print("removeFromPreferences ok")
+                    }
+                    self?.cleanup()
+                }
+            } else {
+                self.cleanup()
+            }
+        } else {
+            self.savePush(pushManager: self.pushManager ?? NEAppPushManager())
+        }
     }
     
     static private func fetchSettings() -> Settings {
@@ -213,6 +215,12 @@ public class LocalPushConnectivityPlugin: NSObject, FlutterPlugin, LocalPushConn
             print("Error decoding settings - \(error)")
             return Settings()
         }
+    }
+    
+    private func cleanup() {
+        self.pushManager?.delegate = nil
+        self.pushManager = nil
+        print("cleanup done")
     }
     
     public static func initializePlugin() {
