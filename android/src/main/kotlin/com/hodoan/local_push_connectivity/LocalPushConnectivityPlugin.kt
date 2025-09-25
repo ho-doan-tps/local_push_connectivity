@@ -203,11 +203,11 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
             override fun onActivityDestroyed(p0: Activity) {}
 
             override fun onActivityPaused(p0: Activity) {
-                flutterApi = null
+                appOpen = false
             }
 
             override fun onActivityResumed(p0: Activity) {
-                flutterApi = LocalPushConnectivityPigeonFlutterApi(binaryMessenger)
+                appOpen = true
             }
 
             override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {}
@@ -215,7 +215,7 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
             override fun onActivityStarted(p0: Activity) {}
 
             override fun onActivityStopped(p0: Activity) {
-                flutterApi = null
+                appOpen = false
             }
         })
     }
@@ -264,6 +264,7 @@ class LocalPushConnectivityPlugin : LocalPushConnectivityPigeonHostApi, FlutterP
         val TAG = LocalPushConnectivityPlugin::class.simpleName
 
         var flutterApi: LocalPushConnectivityPigeonFlutterApi? = null
+        var appOpen = true;
 
         fun isServiceRunning(activity: Activity, serviceClass: Class<*>): Boolean {
             val activityManager =

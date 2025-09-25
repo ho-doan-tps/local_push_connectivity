@@ -247,6 +247,7 @@ class PushNotificationService : Service(), ReceiverCallback {
     }
 
     override fun newMessage(message: String) {
+        Log.e(TAG, "newMessage: $message")
         try {
             var pong: PongModel? = null
             try {
@@ -276,13 +277,11 @@ class PushNotificationService : Service(), ReceiverCallback {
                             }
                         }
                     }
-                } else {
-                    throw Exception("LocalPushConnectivityPlugin.flutterApi is null")
                 }
                 return
             }
             val notificationResponse = PigeonWrapper.fromString<MessageResponse>(message)
-            if (LocalPushConnectivityPlugin.flutterApi != null) {
+            if (LocalPushConnectivityPlugin.flutterApi != null && LocalPushConnectivityPlugin.appOpen) {
                 Handler(Looper.getMainLooper()).post {
                     LocalPushConnectivityPlugin.flutterApi!!.onMessage(
                         MessageSystemPigeon(false, notificationResponse.toPigeon(message))
@@ -296,7 +295,7 @@ class PushNotificationService : Service(), ReceiverCallback {
                     }
                 }
             } else {
-                throw Exception("LocalPushConnectivityPlugin.flutterApi is null")
+                throw Exception("app not open")
             }
         } catch (e: Exception) {
             Log.e(TAG, "newMessage: ${e.message}")

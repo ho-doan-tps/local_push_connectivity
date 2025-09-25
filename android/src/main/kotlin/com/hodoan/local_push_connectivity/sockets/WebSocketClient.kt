@@ -69,15 +69,13 @@ class WebSocketClient(
                 receiverCallback.newMessage("reconnect")
                 launch { heartbeat() }
                 send(Frame.Text(messageRegister()))
+                Log.e(TAG, "mConnect: ${messageRegister()}")
                 for (message in incoming) {
                     when (message) {
                         is Frame.Text -> receiverCallback.newMessage(message.readText())
                         else -> TODO()
                     }
                 }
-            }
-            client.launch {
-
             }
         } catch (e: Exception) {
             Log.e(TAG, "mConnect: $e")
