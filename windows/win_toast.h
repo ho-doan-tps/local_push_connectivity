@@ -26,7 +26,12 @@ public:
 
 	static void Uninstall();
 
-	static void sendToastProcess(std::wstring aumid, std::wstring iContent, std::wstring message);
+	static void sendToastProcess(
+		std::wstring aumid, 
+		std::wstring iContent, 
+		std::wstring title, 
+		std::wstring body, 
+		std::wstring message);
 };
 
 class DesktopNotificationActivatedEventArgsCompat

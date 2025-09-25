@@ -173,7 +173,9 @@ void DesktopNotificationManagerCompat::Uninstall()
 	}
 }
 
-void DesktopNotificationManagerCompat::sendToastProcess(std::wstring aumid, std::wstring iContent, std::wstring message)
+void DesktopNotificationManagerCompat::sendToastProcess(
+	std::wstring aumid, std::wstring iContent,std::wstring title,
+	std::wstring body, std::wstring message)
 {
 	std::cout << "\n\nSending a toast... ";
 
@@ -188,39 +190,10 @@ void DesktopNotificationManagerCompat::sendToastProcess(std::wstring aumid, std:
         </binding>\
     </visual>\
 </toast>");
-
-	// #region parse message
-	//  Get Title and Body
-	std::wstring title;
-	std::wstring content;
-
-	try
-	{
-		JsonObject jsonObject = JsonObject::Parse(message);
-
-		auto notificationObject = jsonObject.GetNamedObject(L"Notification");
-
-		if (notificationObject.HasKey(L"Title"))
-		{
-			title = notificationObject.GetNamedString(L"Title", L"");
-		}
-
-		if (notificationObject.HasKey(L"Body"))
-		{
-			content = notificationObject.GetNamedString(L"Body", L"");
-		}
-	}
-	catch (hresult_error const &e)
-	{
-		content = e.message().c_str();
-	}
-
-	// #endregion
-
 	// Populate with text and values
 	doc.DocumentElement().SetAttribute(L"launch", message);
 	doc.SelectSingleNode(L"//text[1]").InnerText(title);
-	doc.SelectSingleNode(L"//text[2]").InnerText(content);
+	doc.SelectSingleNode(L"//text[2]").InnerText(body);
 	auto path = get_current_path() + L"\\data\\flutter_assets\\" + iContent;
 	doc.SelectSingleNode(L"//image[1]").as<XmlElement>().SetAttribute(L"src", path);
 

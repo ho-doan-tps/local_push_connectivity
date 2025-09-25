@@ -19,35 +19,48 @@
 
 #include <cstdlib>
 
-#include <winrt/windows.networking.h>
-#include <winrt/windows.networking.sockets.h>
-#include <winrt/windows.storage.streams.h>
-#include <winrt/windows.foundation.h>
-
 #include <TlHelp32.h>
 
-using namespace winrt;
-using namespace Windows::Networking;
-using namespace Windows::Networking::Sockets;
-using namespace Windows::Storage::Streams;
-using namespace Windows::Foundation;
-
 namespace local_push_connectivity {
+
+    std::string PluginWrapper::toJson(PluginSetting settings) {
+        json j = settings;
+
+        auto k = j.dump();
+        return base64_encode(k);
+    }
+    std::string PluginWrapper::toJson2(PluginSetting settings) {
+        json j = settings;
+
+        return j.dump();
+    }
+    PluginSetting PluginWrapper::fromJson(std::string json_str) {
+        std::string decode = base64_decode(json_str);
+        json j = json::parse(decode);
+        PluginSetting p = j.get<PluginSetting>();
+        return p;
+    }
 
     // static
     void LocalPushConnectivityPlugin::RegisterWithRegistrar(
         flutter::PluginRegistrarWindows* registrar) {
         auto plugin = std::make_unique<LocalPushConnectivityPlugin>();
+        LocalPushConnectivityPigeonFlutterApi api =
+            LocalPushConnectivityPigeonFlutterApi(registrar->messenger());
+        LocalPushConnectivityPlugin::setApi(api);
         LocalPushConnectivityPigeonHostApi::SetUp(registrar->messenger(), plugin.get());
         registrar->AddPlugin(std::move(plugin));
+        sendMessageFromNoti(true);
     }
 
     LocalPushConnectivityPlugin::LocalPushConnectivityPlugin() {}
 
     LocalPushConnectivityPlugin::~LocalPushConnectivityPlugin() {}
-
+    std::optional<LocalPushConnectivityPigeonFlutterApi> LocalPushConnectivityPlugin::_flutterApi = nullptr;
+    std::wstring LocalPushConnectivityPlugin::_title = L"";
     int LocalPushConnectivityPlugin::RegisterProcess(std::wstring title,
         _In_ wchar_t* command_line) {
+        set_title(title);
         int numArgs;
         LPWSTR* argv = CommandLineToArgvW(command_line, &numArgs);
         std::wcout << "path: " << command_line;
@@ -59,6 +72,9 @@ namespace local_push_connectivity {
             return -1;
         }
 
+        std::string setting_str = wide_to_utf8(argv[1]);
+        auto settings = PluginWrapper::fromJson(setting_str);
+
         auto oldPid = read_pid();
         if (oldPid != -1) {
             killProcess(oldPid);
@@ -67,34 +83,8 @@ namespace local_push_connectivity {
         DWORD pid = GetCurrentProcessId();
         write_pid(pid);
 
-        std::wstring appBundle = argv[1];
-        std::wstring displayName = argv[2];
-        std::wstring iconPath = argv[3];
-        std::wstring iconContent = argv[4];
-        std::wstring host = argv[5];
-        std::wstring port = argv[6];
-        std::wstring systemType = argv[7];
-        std::wstring publicHasKey = argv[8];
-        std::wstring wss = argv[9];
-        std::wstring path = argv[10];
-        std::wstring tcp = argv[11];
-        auto setting = PluginSetting{
-            wide_to_utf8(appBundle),
-            wide_to_utf8(displayName),
-            wide_to_utf8(iconPath),
-            wide_to_utf8(iconContent),
-            wide_to_utf8(host),
-            std::stoll(port),
-            std::stoll(systemType),
-            wide_to_utf8(publicHasKey),
-            wss == L"true",
-            wide_to_utf8(path),
-            tcp == L"true"
-        };
-        LocalPushConnectivityPlugin::saveSetting(setting);
-        LocalPushConnectivityPlugin::startThreadInChildProcess([result]() {
-
-        });
+        LocalPushConnectivityPlugin::saveSetting(settings);
+        LocalPushConnectivityPlugin::startThreadInChildProcess();
         LocalFree(argv);
         return 0;
     }
@@ -104,8 +94,23 @@ namespace local_push_connectivity {
             auto cp_struct = reinterpret_cast<COPYDATASTRUCT*>(lparam);
             try {
                 const wchar_t* data = reinterpret_cast<const wchar_t*>(cp_struct->lpData);
-                std::wstring strs(data, cp_struct->cbData / sizeof(wchar_t));
-                // show notifi
+                std::wstring str(data, cp_struct->cbData / sizeof(wchar_t));
+                auto api = gFlutterApi();
+
+                if (api) {
+                    NotificationPigeon n = NotificationPigeon("n", "n");
+                    MessageResponsePigeon mR = MessageResponsePigeon(n, wide_to_utf8(str));
+                    MessageSystemPigeon m = MessageSystemPigeon(false, mR);
+                    m.set_from_notification(true);
+                    api.value().OnMessage(m,
+                        []() {
+                            std::cout << "Message sent ok";
+                        },
+                        [](const FlutterError& e) {
+                            std::cout << "Message send error: " << e.code()
+                                << " - " << e.message();
+                        });
+                }
             }
             catch (hresult_error const& e) {
                 std::wcout << "Error message: " << e.message().c_str();
@@ -117,42 +122,17 @@ namespace local_push_connectivity {
         switch (msg) {
         case WM_COPYDATA: {
             auto* pCDS = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
-            MessageBoxA(NULL, "ChildHiddenWindow", "receiver ok", MB_OK);
-            if (pCDS->dwData == 100) {
-                std::wstring receiver((wchar_t*)pCDS->lpData);
-                // TODO: handle data settings
-                // SocketClient::updateSettings
-                auto argv = _split(receiver, L"***");
+            try {
+                if (pCDS->dwData == 100) {
+                    std::wstring receiver((wchar_t*)pCDS->lpData);
+                    auto settings = PluginWrapper::fromJson(wide_to_utf8(receiver));
 
-                std::wstring appBundle = argv[1];
-                std::wstring displayName = argv[2];
-                std::wstring iconPath = argv[3];
-                std::wstring iconContent = argv[4];
-                std::wstring host = argv[5];
-                std::wstring port = argv[6];
-                std::wstring systemType = argv[7];
-                std::wstring publicHasKey = argv[8];
-                std::wstring wss = argv[9];
-                std::wstring path = argv[10];
-                std::wstring tcp = argv[11];
-                auto settings = PluginSetting{
-                    wide_to_utf8(appBundle),
-                    wide_to_utf8(displayName),
-                    wide_to_utf8(iconPath),
-                    wide_to_utf8(iconContent),
-                    wide_to_utf8(host),
-                    std::stoll(port),
-                    std::stoll(systemType),
-                    wide_to_utf8(publicHasKey),
-                    wss == L"true",
-                    wide_to_utf8(path),
-                    tcp == L"true"
-                };
-
-                SocketClient::saveSettings(settings);
-
-                MessageBoxA(NULL, wide_to_utf8(receiver).c_str(), wide_to_utf8(receiver).c_str(), MB_OK);
-                std::wcout << L"[Child] receiver: " << receiver;
+                    SocketClient::saveSettings(settings);
+                    std::wcout << L"[Child] receiver: " << receiver;
+                }
+            }
+            catch(hresult_error &e){
+                MessageBoxA(NULL, wide_to_utf8(e.message().c_str()).c_str(), "wide_to_utf8(e.message().c_str()).c_str()", MB_OK);
             }
             return TRUE;
         }
@@ -162,7 +142,7 @@ namespace local_push_connectivity {
 
     HWND LocalPushConnectivityPlugin::createHiddenWindow(HINSTANCE hInstance) {
         WNDCLASSW wc = { 0 };
-        auto settings = gSetting();
+        //auto settings = gSetting();
         wc.lpfnWndProc = HiddenWndProc;
         wc.hInstance = hInstance;
         //wc.lpszClassName = utf8_to_wide(settings.appBundle).c_str();
@@ -177,12 +157,12 @@ namespace local_push_connectivity {
         PluginSetting* param = (PluginSetting*)lpParam;
         createHiddenWindow(GetModuleHandle(NULL));
         try{
-        // connect ws
+            SocketClient::m_connect(param);
         }
         catch (hresult_error& e) {
             DesktopNotificationManagerCompat::sendToastProcess(
                 utf8_to_wide(param->appBundle),
-                L"error", e.message().c_str()
+                L"error", L"-", L"-", e.message().c_str()
             );
         }
         MSG msg;
@@ -193,21 +173,24 @@ namespace local_push_connectivity {
         return 0;
     }
 
-    void LocalPushConnectivityPlugin::sendSettings(const std::wstring& settings) {
+    void LocalPushConnectivityPlugin::sendSettings() {
+        PluginSetting settings = gSetting();
+        std::string commandLine = PluginWrapper::toJson(settings);
         HWND hwndChild = FindWindow(L"ChildHiddenWindow", NULL);
         if (!hwndChild) {
-            MessageBoxA(NULL, "ChildHiddenWindow", "ChildHiddenWindow is null", MB_OK);
+            MessageBoxA(NULL, commandLine.c_str(), "ChildHiddenWindow is null", MB_OK);
             return;
         }
+        std::wstring c = utf8_to_wide(commandLine);
         COPYDATASTRUCT cds;
         cds.dwData = 100;
-        cds.cbData = (DWORD)(settings.size() + 1) * sizeof(wchar_t);
-        cds.lpData = (PVOID)settings.c_str();
-        SendMessage(hwndChild, WM_COPYDATA, (WPARAM)GetCurrentProcessId(),
+        cds.cbData = (DWORD)(wcslen(c.c_str()) + 1) * sizeof(wchar_t);
+        cds.lpData = (PVOID)c.c_str();
+        SendMessageW(hwndChild, WM_COPYDATA, (WPARAM)GetCurrentProcessId(),
             (LPARAM)&cds);
     }
 
-    int LocalPushConnectivityPlugin::createBackgroundProcess(std::function<void(ErrorOr<bool> reply)> result) {
+    int LocalPushConnectivityPlugin::createBackgroundProcess() {
         auto oldPid = read_pid();
         if (oldPid != -1) {
             killProcess(oldPid);
@@ -224,21 +207,12 @@ namespace local_push_connectivity {
         }
 
         PluginSetting settings = LocalPushConnectivityPlugin::gSetting();
+        std::string m_settings = PluginWrapper::toJson(settings);
 
         wchar_t commandLine[700];
-        swprintf(commandLine, 700, L"\"%s\" child \"%s\" \"%s\" \"%s\" \"%s\" \"%s\" \"%lld\" \"%lld\" \"%s\" \"%s\" \"%s\" \"%s\"",
+        swprintf(commandLine, 700, L"\"%s\" child \"%s\"",
             execuablePath,
-            utf8_to_wide(settings.appBundle).c_str(),
-            utf8_to_wide(settings.displayName).c_str(),
-            utf8_to_wide(settings.iconPath).c_str(),
-            utf8_to_wide(settings.iconContent).c_str(),
-            utf8_to_wide(settings.host).c_str(),
-            settings.port,
-            settings.systemType,
-            utf8_to_wide(settings.publicHasKey).c_str(),
-            settings.wss ? L"true" : L"false",
-            utf8_to_wide(settings.path).c_str(),
-            settings.tcp ? L"true" : L"false"
+            utf8_to_wide(m_settings).c_str()
         );
 
         std::wcout << "exe service notification: " << commandLine << L"\n";
@@ -293,7 +267,29 @@ namespace local_push_connectivity {
         ::CloseHandle(hThread);
     }
 
-    void LocalPushConnectivityPlugin::Initialize(const AndroidSettingsPigeon* android,
+    std::optional<MessageSystemPigeon> LocalPushConnectivityPlugin::_m = std::nullopt;
+
+    void LocalPushConnectivityPlugin::sendMessageFromNoti(bool isDelay) {
+        if (isDelay) {
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        auto api = gFlutterApi();
+        if (api && _m) {
+            auto m = *_m;
+            api.value().OnMessage(m,
+                []() {
+                    std::cout << "Message sent ok";
+                },
+                [](const FlutterError& e) {
+                    MessageBoxA(NULL, "send failllll", "ChildHiddenWindow is null", MB_OK);
+                    std::cout << "Message send error: " << e.code()
+                        << " - " << e.message();
+                });
+            return;
+        }
+    }
+
+    void LocalPushConnectivityPlugin::Initialize(int64_t system_type, const AndroidSettingsPigeon* android,
         const WindowsSettingsPigeon* windows,
         const IosSettingsPigeon* ios,
         const TCPModePigeon& mode,
@@ -308,42 +304,79 @@ namespace local_push_connectivity {
             path = wide_to_utf8(utf8_to_wide_2(mode.path()));
         }
         try {
-            LocalPushConnectivityPlugin::saveSetting(PluginSetting{
+            auto settings = PluginSetting{
+                wide_to_utf8(title()),
                 windows->bundle_id(),
                 windows->display_name(),
                 windows->icon(),
                 windows->icon_content(),
                 mode.host(),
                 mode.port(),
-                77,
+                system_type,
                 public_has_key,
                 mode.connection_type() == ConnectionType::kWss,
                 path,
                 mode.connection_type() == ConnectionType::kTcp
-                });
+            };
+            LocalPushConnectivityPlugin::saveSetting(settings);
             if (windows != nullptr) {
                 std::wstring pathIcon = get_current_path() + std::wstring(L"\\data\\flutter_assets\\") + utf8_to_wide(windows->icon());
                 DesktopNotificationManagerCompat::Register(utf8_to_wide(windows->bundle_id()),
                     utf8_to_wide(windows->display_name()), pathIcon);
 
+                settings.iconPath = wide_to_utf8(pathIcon);
+                LocalPushConnectivityPlugin::saveSetting(settings);
+
                 DesktopNotificationManagerCompat::OnActivated([this](
                     DesktopNotificationActivatedEventArgsCompat data) {
                         std::wstring tag = data.Argument();
-                        //std::wstring m = L"\"type\""
-                    });
 
-                LocalPushConnectivityPlugin::createBackgroundProcess();
+                        NotificationPigeon n = NotificationPigeon("n", "n");
+                        MessageResponsePigeon mR = MessageResponsePigeon(n, wide_to_utf8(tag));
+                        MessageSystemPigeon m = MessageSystemPigeon(false, mR);
+                        m.set_from_notification(true);
+
+                        LocalPushConnectivityPlugin::_m = m;
+                        sendMessageFromNoti(false);
+                    });
+                HWND hwndChild = FindWindow(L"ChildHiddenWindow", NULL);
+                if (!hwndChild) {
+                    LocalPushConnectivityPlugin::createBackgroundProcess();
+                    return;
+                }
+                else {
+                    LocalPushConnectivityPlugin::sendSettings();
+                }
+                
+                result(true);
+            }
+            else {
+                result(false);
             }
         }
         catch (hresult_error const& e) {
+            result(false);
             std::wcout << "ERROR register notification: " << e.message().c_str();
         }
+    }
+
+    void LocalPushConnectivityPlugin::RegisterUser(
+        const UserPigeon& user,
+        std::function<void(ErrorOr<bool> reply)> result) {
+        PluginSetting settings = gSetting();
+        settings.connector_id = user.connector_i_d();
+        settings.connector_tag = user.connector_tag();
+        saveSetting(settings);
+        sendSettings();
         result(true);
+    }
+    void LocalPushConnectivityPlugin::DeviceID(std::function<void(ErrorOr<std::string> reply)> result) {
+        result(wide_to_utf8(get_sys_device_id()));
     }
 
     void LocalPushConnectivityPlugin::Config(
         const TCPModePigeon& mode,
-        const std::string* ssid,
+        const flutter::EncodableList* ssids,
         std::function<void(ErrorOr<bool> reply)> result) {
         PluginSetting settings = LocalPushConnectivityPlugin::gSetting();
         settings.host = mode.host();
@@ -353,21 +386,8 @@ namespace local_push_connectivity {
         settings.wss = mode.connection_type() == ConnectionType::kWss;
         settings.path = mode.path() == nullptr ? "-" :
             wide_to_utf8(utf8_to_wide_2(mode.path()));
-        wchar_t commandLine[700];
-        swprintf(commandLine, 700, L"%s***%s***%s***%s***%s***%lld***%lld***%s***%s***%s***%s",
-            utf8_to_wide(settings.appBundle).c_str(),
-            utf8_to_wide(settings.displayName).c_str(),
-            utf8_to_wide(settings.iconPath).c_str(),
-            utf8_to_wide(settings.iconContent).c_str(),
-            utf8_to_wide(settings.host).c_str(),
-            settings.port,
-            settings.systemType,
-            utf8_to_wide(settings.publicHasKey).c_str(),
-            settings.wss ? L"true" : L"false",
-            utf8_to_wide(settings.path).c_str(),
-            settings.tcp ? L"true" : L"false"
-        );
-        sendSettings(commandLine);
+        saveSetting(settings);
+        sendSettings();
         result(true);
     }
 
@@ -385,17 +405,38 @@ namespace local_push_connectivity {
 
     PluginSetting LocalPushConnectivityPlugin::_settings{};
     PluginSetting SocketClient::_settings{};
-    std::function<void()> SocketClient::_callback = nullptr;
+    DataWriter SocketClient::_writer;
 
-    void SocketClient::m_connect(PluginSetting* param, std::function<void()> callback) {
+    void SocketClient::m_connect(PluginSetting* param) {
         SocketClient::saveSettings(*param);
         return SocketClient::connectWss();
     }
+
+    void SocketClient::_heartbeat() {
+        try {
+            json j = PingModel{ "ping" };
+            _writer.WriteString(utf8_to_wide(j.dump()));
+            _writer.StoreAsync().get();
+            _writer.FlushAsync().get();
+        }
+        catch (const hresult_error& e) {
+            std::wcout << "Error " << e.message();
+            MessageBoxA(NULL, wide_to_utf8(e.message().c_str()).c_str(), "soc heartbeat err", MB_OK);
+            connectWss();
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::thread(_heartbeat).detach();
+    }
+
+    StreamWebSocket SocketClient::_socket;
    
     void SocketClient::connectWss() {
         try {
             wchar_t uri[256];
-            auto settings = SocketClient::gSettings();
+            PluginSetting settings = SocketClient::gSettings();
+            if (settings.connector_id.empty()) {
+                throw std::runtime_error("connector is null or empty");
+            }
             std::wstring m = settings.wss ? L"wss" : L"ws";
             swprintf(uri, 256, L"%ls://%ls:%lld%ls",
                 m.c_str(),
@@ -406,23 +447,119 @@ namespace local_push_connectivity {
 
             std::wstring uk(uri);
             Uri serverUri(uri);
-            StreamWebSocket _socket;
+            
+
+            _socket.Closed([](IInspectable const&, WebSocketClosedEventArgs const& args) {
+                MessageBoxA(NULL, "ddsss", "soc is disconnected", MB_OK);
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+                std::thread(connectWss).detach();
+                });
 
             _socket.ConnectAsync(serverUri).get();
-            DataWriter writer(_socket.OutputStream());
+            _writer = DataWriter(_socket.OutputStream());
             auto deviceId = get_sys_device_id();
 
-            writer.WriteString(L"");
-            writer.StoreAsync().get();
-            writer.FlushAsync().get();
-            //receiverWss(_socket);
-            writer.DetachStream();
+            HWND hwnd = FindWindow(nullptr, utf8_to_wide(settings.title).c_str());
+            std::wstring reconnect = L"reconnect";
+            if ((hwnd != nullptr)) {
+                COPYDATASTRUCT cds;
+                cds.dwData = 1;
+                cds.cbData = (DWORD)(wcslen(reconnect.c_str()) + 1) * sizeof(wchar_t);
+                cds.lpData = (PVOID)reconnect.c_str();
+                SendMessageW(hwnd, WM_COPYDATA, (WPARAM)GetCurrentProcessId(), (LPARAM)&cds);
+            }
+
+            RegisterModel registerModel{
+                "register",
+                static_cast<int>(settings.systemType),
+                Sender{
+                    settings.connector_id,
+                    settings.connector_tag,
+                    wide_to_utf8(deviceId)
+                },
+                DataRegister{}
+            };
+
+            json j = registerModel;
+
+            _writer.WriteString(utf8_to_wide(j.dump()));
+            _writer.StoreAsync().get();
+            _writer.FlushAsync().get();
+
+            _heartbeat();
+            receiverWss(_socket);
+            _writer.DetachStream();
             return;
         }
-        catch (hresult_error& e) {
-            std::wcerr << L"Error connect websocket: " << e.message().c_str() << std::endl;
+        catch (...) {
+            std::wstring s = L"SEH: " + GetLastError();
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            std::thread(connectWss).detach();
         }
     }
 
-    void SocketClient::receiverWss(){}
+    void SocketClient::receiverWss(StreamWebSocket& socket){
+        DataReader reader(socket.InputStream());
+        reader.InputStreamOptions(InputStreamOptions::Partial);
+        std::wstring buffer;
+        while (true) {
+            auto byteRead = reader.LoadAsync(4096).get();
+            if (byteRead == 0) {
+                MessageBoxA(NULL, "wide_to_utf8(buffer).c_str()", "reconnect werwerafter 5s", MB_OK);
+                reader.DetachStream();
+                return;
+            }
+            hstring partH = reader.ReadString(byteRead);
+            auto part = utf8_to_wide(winrt::to_string(partH));
+            buffer += part;
+            try {
+                if (!buffer.empty() && buffer.back() == L'}') {
+                    auto settings = gSettings();
+                    MessageResponse p;
+                    PongModel pong;
+                    try {
+                        json j = json::parse(wide_to_utf8(buffer));
+                        p = j.get<MessageResponse>();
+                    }
+                    catch (...) {}
+                    try {
+                        json j = json::parse(wide_to_utf8(buffer));
+                        pong = j.get<PongModel>();
+                    }
+                    catch (...) {}
+                    if (!p.notification) { 
+                        buffer.clear();
+                        continue; 
+                    }
+                    if (pong.pong) {
+                        buffer.clear();
+                        continue;
+                    }
+                    HWND hwnd = FindWindow(nullptr, utf8_to_wide(settings.title).c_str());
+                    if ((hwnd != nullptr)) {
+                        COPYDATASTRUCT cds;
+                        cds.dwData = 1;
+                        cds.cbData = (DWORD)(wcslen(buffer.c_str()) + 1) * sizeof(wchar_t);
+                        cds.lpData = (PVOID)buffer.c_str();
+                        SendMessageW(hwnd, WM_COPYDATA, (WPARAM)GetCurrentProcessId(), (LPARAM)&cds);
+                    }
+                    else {
+                        DesktopNotificationManagerCompat::sendToastProcess(
+                            utf8_to_wide(settings.appBundle),
+                            utf8_to_wide(settings.iconContent),
+                            utf8_to_wide(p.notification.value().title),
+                            utf8_to_wide(p.notification.value().body),
+                            buffer.c_str()
+                        );
+                    }
+                    buffer.clear();
+                }
+            }
+            catch (...) {
+                MessageBoxA(NULL, wide_to_utf8(buffer).c_str(), "reconnect after 5s", MB_OK);
+            }
+        }
+
+        reader.DetachStream();
+    }
 }  // namespace local_push_connectivity
