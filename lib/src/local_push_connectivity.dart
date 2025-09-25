@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'messages.g.dart';
 
@@ -8,7 +9,18 @@ class LocalPushConnectivity extends LocalPushConnectivityPigeonHostApi
     : super(binaryMessenger: null, messageChannelSuffix: '') {
     LocalPushConnectivityPigeonFlutterApi.setUp(this);
     _controller = StreamController<MessageSystemPigeon>.broadcast();
-    message = _controller.stream;
+    message = _controller.stream.map((e) {
+      if (Platform.isWindows) {
+        return MessageSystemPigeon(
+          fromNotification: e.fromNotification,
+          mrp: MessageResponsePigeon(
+            notification: e.mrp.notification,
+            mPayload: e.mrp.mPayload.replaceFirst(RegExp(r'\[\]$'), ''),
+          ),
+        );
+      }
+      return e;
+    });
   }
 
   late final StreamController<MessageSystemPigeon> _controller;
